@@ -11,8 +11,8 @@ export default function Home() {
             Your AI-Powered Learning Companion
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-12 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-            Unlock your full potential with EduGenius - an intelligent education assistant
-            powered by Google Gemini AI. Get instant help with homework, understand complex
+            Unlock your full potential with EduGenius - an intelligent personal education assistant
+            powered by Google Gemini AI. Get instant help 24/7 with homework, understand complex
             concepts, and accelerate your learning journey.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
@@ -36,28 +36,13 @@ export default function Home() {
       <section className="min-h-screen flex items-center justify-center py-20 px-4" id="features">
         <div className="max-w-7xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-bold text-center gradient-text mb-4">
-            Powerful Features for Modern Learners
+            Why Students Love EduGenius
           </h2>
           <p className="text-xl text-gray-300 text-center max-w-3xl mx-auto mb-16">
-            Leverage cutting-edge AI technology to transform your educational experience
+            An AI companion that helps you understand, practice, and master any subject
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeatureCard
-              icon="💡"
-              title="Instant Explanations"
-              description="Get clear, detailed explanations for any topic. Our AI breaks down complex concepts into easy-to-understand language tailored to your level."
-            />
-            <FeatureCard
-              icon="📚"
-              title="Homework Helper"
-              description="Stuck on a problem? Get step-by-step guidance without just giving away the answer. Learn the process, not just the solution."
-            />
-            <FeatureCard
-              icon="🎯"
-              title="Personalized Learning"
-              description="Adaptive AI that understands your learning style and pace. Get customized study plans and recommendations based on your progress."
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <FeatureCard
               icon="🖼️"
               title="Visual Learning"
@@ -65,14 +50,27 @@ export default function Home() {
             />
             <FeatureCard
               icon="🗣️"
-              title="Interactive Conversations"
+              title="Interactive Assistant"
               description="Engage in natural dialogue with your AI tutor. Ask follow-up questions, request examples, and explore topics in depth."
             />
             <FeatureCard
-              icon="⚡"
-              title="24/7 Availability"
-              description="Study on your schedule. Your AI assistant is always ready to help, whether it's midnight or midday."
+              icon="🎮"
+              title="Gamified Quizzes"
+              description="Challenge yourself with interactive quizzes to test your knowledge and track your progress."
             />
+          </div>
+
+          {/* Link to Full Features Page */}
+          <div className="text-center">
+            <Link
+              href="/features"
+              className="glass text-purple-400 px-8 py-4 rounded-xl font-semibold text-lg hover:border-purple-400/50 transition-all inline-flex items-center gap-2 group"
+            >
+              View All Features
+              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>

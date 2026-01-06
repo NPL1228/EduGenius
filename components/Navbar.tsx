@@ -13,15 +13,7 @@ export default function Navbar() {
                 <ul className="hidden md:flex gap-8 items-center">
                     <li>
                         <Link
-                            href="/"
-                            className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
-                        >
-                            Home
-                        </Link>
-                    </li>
-                    <li>
-                        <Link
-                            href="/#features"
+                            href="/features"
                             className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
                         >
                             Features
@@ -29,10 +21,34 @@ export default function Navbar() {
                     </li>
                     <li>
                         <Link
+                            href="/about"
+                            className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
+                        >
+                            About Us
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            href="/contact"
+                            className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
+                        >
+                            Contact
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            href="/login"
+                            className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
+                        >
+                            Login
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
                             href="/chat"
                             className="gradient-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 inline-block"
                         >
-                            Launch App
+                            Start Learning
                         </Link>
                     </li>
                 </ul>
