@@ -17,7 +17,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
             <Link
-              href="/chat"
+              href="/login"
               className="gradient-primary text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 inline-block"
             >
               Start Learning Now
@@ -114,7 +114,7 @@ export default function Home() {
               Join thousands of students who are already learning smarter with EduGenius
             </p>
             <Link
-              href="/chat"
+              href="/login"
               className="gradient-primary text-white px-10 py-5 rounded-xl font-semibold text-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 inline-block"
             >
               Get Started for Free

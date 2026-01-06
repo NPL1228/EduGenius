@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import GuestSignupModal from '@/components/GuestSignupModal';
 
 export default function LoginPage() {
     const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export default function LoginPage() {
         rememberMe: false
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [showGuestModal, setShowGuestModal] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -32,7 +34,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-20">
+        <div className="min-h-screen flex items-center justify-center px-4 py-30">
             <div className="w-full max-w-md">
                 {/* Login Card */}
                 <div className="glass-card p-8">
@@ -137,6 +139,19 @@ export default function LoginPage() {
                             </Link>
                         </p>
                     </div>
+
+                    {/* Sign Up as Guest */}
+                    <div className="mt-2 text-center">
+                        <p className="text-gray-300">
+                            Just passing by?{' '}
+                            <button
+                                onClick={() => setShowGuestModal(true)}
+                                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+                            >
+                                Sign up as guest
+                            </button>
+                        </p>
+                    </div>
                 </div>
 
                 {/* Additional Info */}
@@ -149,6 +164,12 @@ export default function LoginPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Guest Signup Modal */}
+            <GuestSignupModal
+                isOpen={showGuestModal}
+                onClose={() => setShowGuestModal(false)}
+            />
         </div>
     );
 }

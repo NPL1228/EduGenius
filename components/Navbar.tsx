@@ -38,14 +38,6 @@ export default function Navbar() {
                     <li>
                         <Link
                             href="/login"
-                            className="text-gray-300 hover:text-purple-400 transition-colors font-medium"
-                        >
-                            Login
-                        </Link>
-                    </li>
-                    <li>
-                        <Link
-                            href="/chat"
                             className="gradient-primary text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 inline-block"
                         >
                             Start Learning

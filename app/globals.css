@@ -143,6 +143,18 @@
     }
   }
 
+  @keyframes fadeOutDown {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+  }
+
   @keyframes slideDown {
     from {
       transform: translateY(-100%);
@@ -175,6 +187,10 @@
 
   .animate-fadeInUp {
     animation: fadeInUp 0.8s ease forwards;
+  }
+
+  .animate-fadeOutDown {
+    animation: fadeOutDown 0.8s ease forwards;
   }
 
   .animate-slideDown {
