@@ -56,7 +56,7 @@ export default function Home() {
             <FeatureCard
               icon="🎮"
               title="Gamified Quizzes"
-              description="Challenge yourself with interactive quizzes to test your knowledge and track your progress."
+              description="Challenge yourself with fun interactive quizzes to test your knowledge and track your progress."
             />
           </div>
 

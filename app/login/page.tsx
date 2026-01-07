@@ -2,16 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import GuestSignupModal from '@/components/GuestSignupModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
+    const router = useRouter();
+    const { login } = useAuth();
     const [formData, setFormData] = useState({
-        email: '',
+        username: '',
         password: '',
         rememberMe: false
     });
     const [isLoading, setIsLoading] = useState(false);
     const [showGuestModal, setShowGuestModal] = useState(false);
+    const [error, setError] = useState('');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -19,18 +24,28 @@ export default function LoginPage() {
             ...formData,
             [e.target.name]: value
         });
+        setError(''); // Clear error when user types
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
-        // Simulate login
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Simulate login delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Try to login with credentials
+        const success = login(formData.username, formData.password);
 
         setIsLoading(false);
-        // Redirect to chat page (in a real app)
-        window.location.href = '/chat';
+
+        if (success) {
+            // Redirect to chat page
+            router.push('/dashboard');
+        } else {
+            setError('Invalid username or password. Try: user123 / user123');
+        }
     };
 
     return (
@@ -44,20 +59,28 @@ export default function LoginPage() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Error Message */}
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/50 rounded-xl px-4 py-3 text-red-400 text-sm">
+                                {error}
+                            </div>
+                        )}
+
                         <div>
-                            <label htmlFor="email" className="block text-gray-300 mb-2 font-medium">
-                                Email Address
+                            <label htmlFor="username" className="block text-gray-300 mb-2 font-medium">
+                                Username
                             </label>
                             <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
+                                type="text"
+                                id="username"
+                                name="username"
+                                value={formData.username}
                                 onChange={handleChange}
                                 required
                                 className="w-full px-4 py-3 glass border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-all"
-                                placeholder="your.email@example.com"
+                                placeholder="user123"
                             />
+                            <p className="mt-1 text-xs text-gray-400">Demo: user123</p>
                         </div>
 
                         <div>
@@ -74,6 +97,7 @@ export default function LoginPage() {
                                 className="w-full px-4 py-3 glass border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-all"
                                 placeholder="••••••••"
                             />
+                            <p className="mt-1 text-xs text-gray-400">Demo: user123</p>
                         </div>
 
                         <div className="flex items-center justify-between">

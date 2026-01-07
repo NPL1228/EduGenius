@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-    const [isGuest] = useState(true); // This would be determined by authentication state
+    const [isGuest, setIsGuest] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const user = localStorage.getItem("user");
+        const guest = JSON.parse(user || "{}");
+        setIsGuest(guest?.isGuest);
+    }, []);
+
+    if (isGuest === null) return null;
 
     return (
-        <div className="min-h-screen pt-20 px-4 pb-16">
+        <div className="min-h-screen pt-30 px-4 pb-16">
             <div className="max-w-7xl mx-auto">
                 {/* Guest Banner */}
                 {isGuest && (
@@ -167,12 +175,6 @@ export default function DashboardPage() {
                                     className="gradient-primary text-white px-10 py-5 rounded-xl font-semibold text-xl shadow-lg hover:shadow-purple-500/50 transition-all hover:scale-105 inline-block"
                                 >
                                     Create Free Account
-                                </Link>
-                                <Link
-                                    href="/chat"
-                                    className="glass border border-white/20 text-white px-10 py-5 rounded-xl font-semibold text-xl hover:border-purple-400/50 transition-all inline-block"
-                                >
-                                    Continue as Guest
                                 </Link>
                             </div>
                         </div>
