@@ -64,9 +64,9 @@ export default function NotesPage() {
                         <p className="text-gray-400">Upload documents or paste text to generate AI-powered summaries and study guides.</p>
                     </div>
 
-                    <div className="flex items-start gap-6 h-full min-h-0">
+                    <div className="flex items-start gap-3 h-full min-h-0">
                         {/* Sidebar List */}
-                        <div className="w-full md:w-1/3 flex flex-col gap-4 h-full min-h-0">
+                        <div className="w-full md:w-1/3 flex flex-col h-full min-h-0">
                             <NoteUploader onUpload={handleUpload} isProcessing={isProcessing} />
 
                             <div className="glass-card flex-1 overflow-hidden flex flex-col min-h-0">

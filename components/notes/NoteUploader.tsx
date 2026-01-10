@@ -54,7 +54,7 @@ export default function NoteUploader({ onUpload, isProcessing }: NoteUploaderPro
     };
 
     return (
-        <div className="glass-card mb-8">
+        <div className="glass-card mb-4">
             <h3 className="text-xl font-semibold mb-4 text-white">Create New Note</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -89,8 +89,8 @@ export default function NoteUploader({ onUpload, isProcessing }: NoteUploaderPro
                         type="submit"
                         disabled={isProcessing || (!text && !file)}
                         className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all ${isProcessing || (!text && !file)
-                                ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                                : 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-lg shadow-primary/20'
+                            ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                            : 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-lg shadow-primary/20'
                             }`}
                     >
                         {isProcessing ? 'Thinking...' : '✨ Summarize & Create'}

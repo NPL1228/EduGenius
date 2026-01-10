@@ -60,6 +60,22 @@ export default function DashboardPage() {
                         <p className="text-gray-400">Chat with your AI tutor</p>
                     </Link>
 
+                    <Link href="/dashboard/notes" className="glass-card hover:border-purple-400/50 transition-all group">
+                        <div className="text-5xl mb-4">📝</div>
+                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                            My Notes
+                        </h3>
+                        <p className="text-gray-400">View and manage your notes</p>
+                    </Link>
+
+                    <Link href="/game_dungeon" className="glass-card hover:border-purple-400/50 transition-all group">
+                        <div className="text-5xl mb-4">🎮</div>
+                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                            Game Dungeon
+                        </h3>
+                        <p className="text-gray-400">Learn through gaming</p>
+                    </Link>
+
                     <div className="glass-card opacity-50 cursor-not-allowed">
                         <div className="text-5xl mb-4">📊</div>
                         <h3 className="text-xl font-bold text-white mb-2">
@@ -67,26 +83,6 @@ export default function DashboardPage() {
                         </h3>
                         <p className="text-gray-400">
                             {isGuest ? "Sign up to track progress" : "View your learning stats"}
-                        </p>
-                    </div>
-
-                    <div className="glass-card opacity-50 cursor-not-allowed">
-                        <div className="text-5xl mb-4">🏆</div>
-                        <h3 className="text-xl font-bold text-white mb-2">
-                            Achievements {isGuest && "🔒"}
-                        </h3>
-                        <p className="text-gray-400">
-                            {isGuest ? "Sign up to earn badges" : "View your badges"}
-                        </p>
-                    </div>
-
-                    <div className="glass-card opacity-50 cursor-not-allowed">
-                        <div className="text-5xl mb-4">📚</div>
-                        <h3 className="text-xl font-bold text-white mb-2">
-                            Study History {isGuest && "🔒"}
-                        </h3>
-                        <p className="text-gray-400">
-                            {isGuest ? "Sign up to save history" : "Review past sessions"}
                         </p>
                     </div>
                 </div>
