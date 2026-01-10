@@ -2,6 +2,11 @@
 
 @import "tailwindcss";
 
+:root {
+  --background: var(--color-background);
+  --foreground: var(--color-text-primary);
+}
+
 @theme inline {
   /* Custom Color Palette */
   --color-primary: hsl(239, 84%, 67%);
