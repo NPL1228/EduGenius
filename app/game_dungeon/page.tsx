@@ -1,4 +1,4 @@
-import { GameScreen } from '@/components/combine/GameScreen';
+import { GameScreen } from '@/components/game_dungeon/GameScreen';
 
 export default function Home() {
   return (

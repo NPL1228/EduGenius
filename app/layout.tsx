@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
+import 'katex/dist/katex.min.css';
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/contexts/AuthContext";
 
