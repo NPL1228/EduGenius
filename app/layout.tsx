@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import 'katex/dist/katex.min.css';
-import Navbar from "@/components/Navbar";
+import ConditionalNavbar from "@/components/ConditionalNavbar";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({
@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased`}>
         <AuthProvider>
-          <Navbar />
+          <ConditionalNavbar />
           {children}
         </AuthProvider>
       </body>

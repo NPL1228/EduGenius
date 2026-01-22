@@ -60,21 +60,41 @@ export default function DashboardPage() {
                         <p className="text-gray-400">Chat with your AI tutor</p>
                     </Link>
 
-                    <Link href="/dashboard/notes" className="glass-card hover:border-purple-400/50 transition-all group">
-                        <div className="text-5xl mb-4">📝</div>
-                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
-                            My Notes
-                        </h3>
-                        <p className="text-gray-400">View and manage your notes</p>
-                    </Link>
+                    {isGuest ? (
+                        <div className="glass-card opacity-50 cursor-not-allowed group">
+                            <div className="text-5xl mb-4">📝</div>
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                My Notes {isGuest && "🔒"}
+                            </h3>
+                            <p className="text-gray-400">Sign up to view notes</p>
+                        </div>
+                    ) : (
+                        <Link href="/dashboard/notes" className="glass-card hover:border-purple-400/50 transition-all group">
+                            <div className="text-5xl mb-4">📝</div>
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                                My Notes
+                            </h3>
+                            <p className="text-gray-400">View and manage your notes</p>
+                        </Link>
+                    )}
 
-                    <Link href="/game_dungeon" className="glass-card hover:border-purple-400/50 transition-all group">
-                        <div className="text-5xl mb-4">🎮</div>
-                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
-                            Game Dungeon
-                        </h3>
-                        <p className="text-gray-400">Learn through gaming</p>
-                    </Link>
+                    {isGuest ? (
+                        <div className="glass-card opacity-50 cursor-not-allowed group">
+                            <div className="text-5xl mb-4">🎮</div>
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                Game Dungeon {isGuest && "🔒"}
+                            </h3>
+                            <p className="text-gray-400">Sign up to play</p>
+                        </div>
+                    ) : (
+                        <Link href="/game_dungeon" className="glass-card hover:border-purple-400/50 transition-all group">
+                            <div className="text-5xl mb-4">🎮</div>
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                                Game Dungeon
+                            </h3>
+                            <p className="text-gray-400">Learn through gaming</p>
+                        </Link>
+                    )}
 
                     <div className="glass-card opacity-50 cursor-not-allowed">
                         <div className="text-5xl mb-4">📊</div>

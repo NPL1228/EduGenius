@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import NoteUploader from '@/components/notes/NoteUploader';
 import NoteEditor from '@/components/notes/NoteEditor';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
 import { Note } from '@/types/notes';
 
@@ -10,6 +12,17 @@ export default function NotesPage() {
     const { notes, addNote, updateNote, deleteNote, isLoading } = useNotes();
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const router = useRouter();
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (user?.isGuest) {
+            router.push('/dashboard');
+        }
+    }, [user, router]);
+
+    // Don't render content for guests to prevent flashing
+    if (user?.isGuest) return null;
 
     // Auto-select the first note if exists and nothing selected
     if (!selectedNoteId && notes.length > 0 && !isLoading) {
