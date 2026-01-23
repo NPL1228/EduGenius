@@ -2,8 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignUpPage() {
+    const router = useRouter();
+    const { register } = useAuth();
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -60,12 +64,20 @@ export default function SignUpPage() {
 
         setIsLoading(true);
 
-        // Simulate sign up
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Register user
+        const result = register(formData.email, formData.fullName, formData.password);
 
         setIsLoading(false);
-        // Redirect to chat page (in a real app)
-        window.location.href = '/chat';
+
+        if (result.success) {
+            // Redirect to dashboard
+            router.push('/dashboard');
+        } else {
+            setErrors({ email: result.error || 'Registration failed' });
+        }
     };
 
     return (

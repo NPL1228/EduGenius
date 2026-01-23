@@ -4,13 +4,23 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 interface User {
     username: string;
+    email?: string;
+    fullName?: string;
     isGuest: boolean;
+}
+
+interface RegisteredUser {
+    email: string;
+    username: string;
+    fullName: string;
+    password: string;
 }
 
 interface AuthContextType {
     user: User | null;
     isLoggedIn: boolean;
     login: (username: string, password: string) => boolean;
+    register: (email: string, fullName: string, password: string) => { success: boolean; error?: string };
     loginAsGuest: (guestName: string) => void;
     logout: () => void;
 }
@@ -22,6 +32,8 @@ const DEMO_CREDENTIALS = {
     username: 'user123',
     password: 'user123'
 };
+
+const REGISTERED_USERS_KEY = 'registeredUsers';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -37,8 +49,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
+    const getRegisteredUsers = (): RegisteredUser[] => {
+        const users = localStorage.getItem(REGISTERED_USERS_KEY);
+        return users ? JSON.parse(users) : [];
+    };
+
+    const register = (email: string, fullName: string, password: string): { success: boolean; error?: string } => {
+        const registeredUsers = getRegisteredUsers();
+
+        // Check if email already exists
+        if (registeredUsers.some(u => u.email === email)) {
+            return { success: false, error: 'Email already registered' };
+        }
+
+        // Add new user
+        const newUser: RegisteredUser = {
+            email,
+            username: email, // Use email as username
+            fullName,
+            password
+        };
+
+        registeredUsers.push(newUser);
+        localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
+
+        // Auto-login after registration
+        const loggedInUser: User = {
+            username: fullName,
+            email,
+            fullName,
+            isGuest: false
+        };
+        setUser(loggedInUser);
+        setIsLoggedIn(true);
+        localStorage.setItem('user', JSON.stringify(loggedInUser));
+
+        return { success: true };
+    };
+
     const login = (username: string, password: string): boolean => {
-        // Check demo credentials
+        // First check registered users
+        const registeredUsers = getRegisteredUsers();
+        const foundUser = registeredUsers.find(
+            u => (u.email === username || u.username === username) && u.password === password
+        );
+
+        if (foundUser) {
+            const newUser: User = {
+                username: foundUser.fullName,
+                email: foundUser.email,
+                fullName: foundUser.fullName,
+                isGuest: false
+            };
+            setUser(newUser);
+            setIsLoggedIn(true);
+            localStorage.setItem('user', JSON.stringify(newUser));
+            return true;
+        }
+
+        // Fall back to demo credentials
         if (username === DEMO_CREDENTIALS.username && password === DEMO_CREDENTIALS.password) {
             const newUser: User = {
                 username: username,
@@ -49,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('user', JSON.stringify(newUser));
             return true;
         }
+
         return false;
     };
 
@@ -69,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn, login, loginAsGuest, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn, login, register, loginAsGuest, logout }}>
             {children}
         </AuthContext.Provider>
     );
