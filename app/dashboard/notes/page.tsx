@@ -9,6 +9,15 @@ import { useNotes } from '@/hooks/useNotes';
 import { Note } from '@/types/notes';
 
 export default function NotesPage() {
+    // 🔽 ADD THIS HERE
+    function enhanceNote(markdown: string) {
+        return markdown
+            // add emoji to headings
+            .replace(/^## (.*)$/gm, '## 📌 $1')
+            // slightly emphasize bold words
+            .replace(/\*\*(.*?)\*\*/g, '**$1**');
+    }
+
     const { notes, addNote, updateNote, deleteNote, isLoading } = useNotes();
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -46,6 +55,8 @@ export default function NotesPage() {
             }
 
             const { summary } = await response.json();
+
+            const enhancedSummary = enhanceNote(summary);
 
             const newNote = addNote({
                 title: data.title,

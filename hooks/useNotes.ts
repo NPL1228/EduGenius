@@ -28,9 +28,16 @@ export function useNotes() {
         }
     }, [notes, isLoading]);
 
+    const generateId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    };
+
     const addNote = (input: CreateNoteInput) => {
         const newNote: Note = {
-            id: crypto.randomUUID(),
+            id: generateId(),
             ...input,
             createdAt: Date.now(),
             updatedAt: Date.now(),

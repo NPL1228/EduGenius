@@ -15,9 +15,16 @@ export async function POST(req: Request) {
         const { text, fileData, mimeType } = await req.json();
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-        let propmt = "Analyze this content and create a comprehensive, well-structured note. Use formatting like bolding, bullet points, and headers to make it easy to study. If it's a long document, summarize the key points.";
+        let propmt =
+            `Analyze this content and create a comprehensive, well-structured note. 
+        Use formatting like bolding, bullet points, and headers to make it easy to study.
+        Frist, create a title for the note. 
+        Then Create sub-title for the note and the explanation. 
+        If the content can be explain by example add one or two examples.
+        If it's a long document, summarize the key points.
+        If the content is a ppt format add which slide is the content`;
 
         let result;
 

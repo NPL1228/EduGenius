@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Note } from '@/types/notes';
+import ReactMarkdown from 'react-markdown';
+
 
 interface NoteEditorProps {
     note: Note;
@@ -78,8 +80,8 @@ export default function NoteEditor({ note, onSave, onDelete }: NoteEditorProps) 
                         className="w-full h-full bg-transparent text-gray-200 resize-none focus:outline-none font-mono text-sm leading-relaxed"
                     />
                 ) : (
-                    <div className="prose prose-invert prose-sm max-w-none text-gray-300 whitespace-pre-wrap">
-                        {content}
+                    <div className="prose prose-invert max-w-none">
+                        <ReactMarkdown>{content}</ReactMarkdown>
                     </div>
                 )}
             </div>
