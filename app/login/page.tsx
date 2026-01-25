@@ -44,7 +44,7 @@ export default function LoginPage() {
             // Redirect to chat page
             router.push('/dashboard');
         } else {
-            setError('Invalid username or password. Try: user123 / user123');
+            setError('Invalid credentials. Try: user123 / user123 or your registered email');
         }
     };
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
 
                         <div>
                             <label htmlFor="username" className="block text-gray-300 mb-2 font-medium">
-                                Username
+                                Email or Username
                             </label>
                             <input
                                 type="text"
@@ -78,9 +78,9 @@ export default function LoginPage() {
                                 onChange={handleChange}
                                 required
                                 className="w-full px-4 py-3 glass border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-all"
-                                placeholder="user123"
+                                placeholder="your.email@example.com"
                             />
-                            <p className="mt-1 text-xs text-gray-400">Demo: user123</p>
+                            <p className="mt-1 text-xs text-gray-400">Demo: user123 or use your registered email</p>
                         </div>
 
                         <div>
