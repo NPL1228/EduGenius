@@ -80,6 +80,7 @@ export default function ChatPage() {
         if (userMessages.length === 0) return;
 
         let chatCategory = category;
+        let chatTitle = userMessages[0].content.substring(0, 50) + (userMessages[0].content.length > 50 ? '...' : '');
 
         // If no category provided, categorize using AI (only for first user message)
         if (!category && userMessages.length === 1) {
@@ -91,21 +92,28 @@ export default function ChatPage() {
                 });
                 const data = await response.json();
                 chatCategory = data.category;
+                if (data.title) {
+                    chatTitle = data.title;
+                }
             } catch (error) {
                 console.error('Failed to categorize chat', error);
                 chatCategory = 'Others';
             }
         }
 
-        const title = userMessages[0].content.substring(0, 50) + (userMessages[0].content.length > 50 ? '...' : '');
         const now = Date.now();
 
         setChatHistory(prev => {
             const existingIndex = prev.findIndex(chat => chat.id === targetChatId);
+
+            // Use existing title if available (and we didn't just generate a new AI title), otherwise use the calculated/AI title
+            const existingChat = prev[existingIndex];
+            const finalTitle = (existingChat && existingChat.title && !category) ? existingChat.title : chatTitle;
+
             const updatedChat: ChatHistory = {
                 id: targetChatId as string,
-                title,
-                category: (chatCategory as any) || prev[existingIndex]?.category || 'Others',
+                title: finalTitle,
+                category: (chatCategory as any) || existingChat?.category || 'Others',
                 messages: updatedMessages,
                 createdAt: prev[existingIndex]?.createdAt || now,
                 updatedAt: now
