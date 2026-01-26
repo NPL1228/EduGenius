@@ -23,6 +23,7 @@ interface AuthContextType {
     register: (email: string, fullName: string, password: string) => { success: boolean; error?: string };
     loginAsGuest: (guestName: string) => void;
     logout: () => void;
+    updateProfile: (data: { username?: string; fullName?: string }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -138,8 +139,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user');
     };
 
+    const updateProfile = (data: { username?: string; fullName?: string }) => {
+        if (!user) return;
+
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        // If registered user, update the registered list too
+        if (!user.isGuest && user.email) {
+            const registeredUsers = getRegisteredUsers();
+            const index = registeredUsers.findIndex(u => u.email === user.email);
+            if (index !== -1) {
+                if (data.username) registeredUsers[index].username = data.username;
+                if (data.fullName) registeredUsers[index].fullName = data.fullName;
+                localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
+            }
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn, login, register, loginAsGuest, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn, login, register, loginAsGuest, logout, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

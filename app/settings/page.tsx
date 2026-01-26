@@ -4,6 +4,58 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import Link from 'next/link';
 
+function ProfileEditForm({ user }: { user: any }) {
+    const { updateProfile } = useAuth();
+    const [isEditing, setIsEditing] = useState(false);
+    const [username, setUsername] = useState(user?.username || '');
+
+    const handleSave = () => {
+        updateProfile({ username });
+        setIsEditing(false);
+    };
+
+    if (isEditing) {
+        return (
+            <div className="flex gap-2 w-full">
+                <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="flex-1 px-4 py-3 glass border border-purple-400 rounded-xl text-white placeholder-gray-400 focus:outline-none transition-all"
+                    autoFocus
+                />
+                <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors"
+                >
+                    Save
+                </button>
+                <button
+                    onClick={() => {
+                        setIsEditing(false);
+                        setUsername(user?.username || '');
+                    }}
+                    className="px-4 py-2 glass hover:bg-white/10 text-gray-300 rounded-xl font-medium transition-colors"
+                >
+                    Cancel
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex justify-between items-center w-full px-4 py-3 glass border border-white/10 rounded-xl">
+            <span className="text-white font-medium">{user?.username}</span>
+            <button
+                onClick={() => setIsEditing(true)}
+                className="text-purple-400 hover:text-purple-300 text-sm font-semibold transition-colors"
+            >
+                Edit
+            </button>
+        </div>
+    );
+}
+
 export default function SettingsPage() {
     const { user, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('profile');
@@ -69,12 +121,21 @@ export default function SettingsPage() {
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-gray-300 mb-2 font-medium">Username</label>
-                                        <input
-                                            type="text"
-                                            value={user?.username || ''}
-                                            disabled
-                                            className="w-full px-4 py-3 glass border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 transition-all disabled:opacity-50"
-                                        />
+                                        <div className="flex gap-4">
+                                            <input
+                                                type="text"
+                                                value={user?.username || ''}
+                                                onChange={(e) => {
+                                                    // This is instant update - for a real app usually you'd have local state + save button
+                                                    // But for this simple requirement, we can update context directly or better: use local state + explicit save
+                                                }}
+                                                // Let's implement local state approach below in a separate EditProfile component logic block
+                                                // Actually, let's keep it simple within this component
+                                                disabled
+                                                className="hidden" // Hiding this dummy input to replace with actual implementation below
+                                            />
+                                            <ProfileEditForm user={user} />
+                                        </div>
                                     </div>
 
                                     <div>

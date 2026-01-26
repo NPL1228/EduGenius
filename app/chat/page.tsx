@@ -6,7 +6,7 @@ import MessageBubble from '@/components/MessageBubble';
 import TypingIndicator from '@/components/TypingIndicator';
 import ImageUploader from '@/components/chat/ImageUploader';
 import VoiceInput from '@/components/chat/VoiceInput';
-import ChatHeader from '@/components/ChatHeader';
+import FeatureHeader from '@/components/FeatureHeader';
 import ChatHistorySidebar, { ChatHistory } from '@/components/chat/ChatHistorySidebar';
 
 const CHAT_HISTORY_KEY = 'chatHistory';
@@ -69,6 +69,16 @@ export default function ChatPage() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isLoading]);
+
+    useEffect(() => {
+        // lock page scroll
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            // restore scroll when leaving chat
+            document.body.style.overflow = '';
+        };
+    }, []);
 
 
     // Save current chat to history
@@ -260,7 +270,7 @@ export default function ChatPage() {
     return (
         <div className="h-screen flex flex-col">
             {/* Custom Chat Header */}
-            <ChatHeader />
+            <FeatureHeader title="AI Tutor" />
 
             {/* Main Content: Sidebar + Chat */}
             <div className="flex-1 flex overflow-hidden pt-16">

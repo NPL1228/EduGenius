@@ -69,7 +69,7 @@ export default function DashboardPage() {
                             <p className="text-gray-400">Sign up to view notes</p>
                         </div>
                     ) : (
-                        <Link href="/dashboard/notes" className="glass-card hover:border-purple-400/50 transition-all group">
+                        <Link href="/notes" className="glass-card hover:border-purple-400/50 transition-all group">
                             <div className="text-5xl mb-4">📝</div>
                             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
                                 My Notes
@@ -96,15 +96,27 @@ export default function DashboardPage() {
                         </Link>
                     )}
 
-                    <div className="glass-card opacity-50 cursor-not-allowed">
-                        <div className="text-5xl mb-4">📊</div>
-                        <h3 className="text-xl font-bold text-white mb-2">
-                            My Progress {isGuest && "🔒"}
-                        </h3>
-                        <p className="text-gray-400">
-                            {isGuest ? "Sign up to track progress" : "View your learning stats"}
-                        </p>
-                    </div>
+                    {isGuest ? (
+                        <div className="glass-card opacity-50 cursor-not-allowed group">
+                            <div className="text-5xl mb-4">🗓️</div>
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                Study Planner 🔒
+                            </h3>
+                            <p className="text-gray-400">Sign up to plan your study</p>
+                        </div>
+                    ) : (
+                        <Link
+                            href="/study_planner"
+                            className="glass-card hover:border-purple-400/50 transition-all group"
+                        >
+                            <div className="text-5xl mb-4">🗓️</div>
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                                Study Planner
+                            </h3>
+                            <p className="text-gray-400">Plan your study</p>
+                        </Link>
+                    )}
+
                 </div>
 
                 {/* Features Overview */}

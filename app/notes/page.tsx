@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import NoteUploader from '@/components/notes/NoteUploader';
+import FeatureHeader from '@/components/FeatureHeader';
 import NoteEditor from '@/components/notes/NoteEditor';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -78,16 +79,9 @@ export default function NotesPage() {
 
     return (
         <main className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+            <FeatureHeader title="Smart Notes" />
             <div className="max-w-7xl mx-auto h-[calc(100vh-8rem)]">
                 <div className="flex flex-col h-full gap-6">
-                    {/* Header */}
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2">
-                            <span className="gradient-text">Smart Notes</span>
-                        </h1>
-                        <p className="text-gray-400">Upload documents or paste text to generate AI-powered summaries and study guides.</p>
-                    </div>
-
                     <div className="flex items-start gap-3 h-full min-h-0">
                         {/* Sidebar List */}
                         <div className="w-full md:w-1/3 flex flex-col h-full min-h-0">

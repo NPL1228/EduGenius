@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import FeatureHeader from "@/components/FeatureHeader";
 import { Geist, Geist_Mono } from "next/font/google";
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +25,10 @@ export default function CombineLayout({
     <div
       className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
     >
-      {children}
+      <FeatureHeader title="Dungeon Manager" />
+      <div className="pt-16">
+        {children}
+      </div>
     </div>
   );
 }
