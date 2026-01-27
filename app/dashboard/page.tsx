@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import StreakWidget from '@/components/StreakWidget';
 
 export default function DashboardPage() {
     const [isGuest, setIsGuest] = useState<boolean | null>(null);
@@ -40,14 +41,22 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* Welcome Section */}
-                <div className="mb-12">
-                    <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-4">
-                        Welcome to Your Learning Dashboard
-                    </h1>
-                    <p className="text-xl text-gray-300">
-                        {isGuest ? "Start exploring EduGenius features below" : "Track your progress and continue learning"}
-                    </p>
+                {/* Welcome & Streak Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    <div className="lg:col-span-2 flex flex-col justify-center">
+                        <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-4">
+                            Welcome to Your Learning Dashboard
+                        </h1>
+                        <p className="text-xl text-gray-300">
+                            {isGuest ? "Start exploring EduGenius features below" : "Track your progress and continue learning"}
+                        </p>
+                    </div>
+
+                    {!isGuest && (
+                        <div className="lg:col-span-1">
+                            <StreakWidget />
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions */}
