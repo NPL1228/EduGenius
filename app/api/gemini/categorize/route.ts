@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '
 
 export async function POST(request: NextRequest) {
     try {
-        const { message } = await request.json();
+        const { message, categories } = await request.json();
 
         if (!message) {
             return NextResponse.json(
@@ -14,10 +14,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Use provided categories or default ones
+        const availableCategories = categories && categories.length > 0
+            ? categories
+            : ['Math', 'Science', 'Languages', 'History', 'Others'];
+
         const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
         const prompt = `Analyze the following message and provide two things:
-1. A category (one of: Math, Science, Languages, History, Others)
+1. A category (one of: ${availableCategories.join(', ')})
 2. A short, concise title (max 5-6 words) for a chat starting with this message.
 
 Respond ONLY with a valid JSON object in this format:
@@ -47,8 +52,7 @@ Message: "${message}"`;
         }
 
         // Validate category
-        const validCategories = ['Math', 'Science', 'Languages', 'History', 'Others'];
-        const finalCategory = validCategories.includes(jsonResponse.category) ? jsonResponse.category : 'Others';
+        const finalCategory = availableCategories.includes(jsonResponse.category) ? jsonResponse.category : 'Others';
 
         return NextResponse.json({
             category: finalCategory,

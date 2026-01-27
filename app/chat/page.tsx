@@ -28,6 +28,7 @@ export default function ChatPage() {
         mimeType: string;
         url: string;
     } | null>(null);
+    const [categories, setCategories] = useState<string[]>(['Math', 'Science', 'Languages', 'History', 'Others']);
 
     // Load chat history from localStorage
     useEffect(() => {
@@ -46,6 +47,18 @@ export default function ChatPage() {
                 setChatHistory(normalized);
             } catch (e) {
                 console.error('Failed to parse chat history', e);
+            }
+        }
+    }, []);
+
+    // Load categories from localStorage
+    useEffect(() => {
+        const storedCategories = localStorage.getItem('chatCategories');
+        if (storedCategories) {
+            try {
+                setCategories(JSON.parse(storedCategories));
+            } catch (e) {
+                console.error('Failed to parse categories', e);
             }
         }
     }, []);
@@ -98,7 +111,10 @@ export default function ChatPage() {
                 const response = await fetch('/api/gemini/categorize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userMessages[0].content })
+                    body: JSON.stringify({
+                        message: userMessages[0].content,
+                        categories: categories // Pass current categories to API
+                    })
                 });
                 const data = await response.json();
                 chatCategory = data.category;
@@ -260,11 +276,45 @@ export default function ChatPage() {
         }
     };
 
+    // Save categories
+    useEffect(() => {
+        localStorage.setItem('chatCategories', JSON.stringify(categories));
+    }, [categories]);
+
     const handleDeleteChat = (chatId: string) => {
         setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
         if (currentChatId === chatId) {
             handleNewChat();
         }
+    };
+
+    const handleRenameChat = (chatId: string, newTitle: string) => {
+        setChatHistory(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, title: newTitle } : chat
+        ));
+    };
+
+    const handleChangeCategory = (chatId: string, newCategory: string) => {
+        setChatHistory(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, category: newCategory as any } : chat
+        ));
+    };
+
+    const handleAddCategory = (name: string) => {
+        if (!categories.includes(name)) {
+            setCategories(prev => [...prev, name]);
+        }
+    };
+
+    const handleRenameCategory = (oldName: string, newName: string) => {
+        if (categories.includes(newName)) return; // Prevent duplicates
+
+        setCategories(prev => prev.map(c => c === oldName ? newName : c));
+
+        // Update all chats with the old category
+        setChatHistory(prev => prev.map(chat =>
+            chat.category === oldName ? { ...chat, category: newName } : chat
+        ));
     };
 
     return (
@@ -282,6 +332,11 @@ export default function ChatPage() {
                         onSelectChat={handleSelectChat}
                         onNewChat={handleNewChat}
                         onDeleteChat={handleDeleteChat}
+                        onRenameChat={handleRenameChat}
+                        onChangeCategory={handleChangeCategory}
+                        categories={categories}
+                        onAddCategory={handleAddCategory}
+                        onRenameCategory={handleRenameCategory}
                     />
                 </div>
 
