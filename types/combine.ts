@@ -12,4 +12,9 @@ export interface GameState {
     floorLevel: number;
     currentCombo: number;
     history: Flashcard[];
+    topic: string | null;
+    isGameStarted: boolean;
+    currentAttempts: number;
+    isGameOver: boolean;
+    chatMessages: { role: 'user' | 'assistant'; content: string }[];
 }
