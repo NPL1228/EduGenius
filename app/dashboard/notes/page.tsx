@@ -7,17 +7,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
 import { Note } from '@/types/notes';
+import Link from 'next/link';
+
 
 export default function NotesPage() {
-    // 🔽 ADD THIS HERE
-    function enhanceNote(markdown: string) {
-        return markdown
-            // add emoji to headings
-            .replace(/^## (.*)$/gm, '## 📌 $1')
-            // slightly emphasize bold words
-            .replace(/\*\*(.*?)\*\*/g, '**$1**');
-    }
-
     const { notes, addNote, updateNote, deleteNote, isLoading } = useNotes();
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -56,8 +49,6 @@ export default function NotesPage() {
 
             const { summary } = await response.json();
 
-            const enhancedSummary = enhanceNote(summary);
-
             const newNote = addNote({
                 title: data.title,
                 content: summary,
@@ -81,11 +72,26 @@ export default function NotesPage() {
             <div className="max-w-7xl mx-auto h-[calc(100vh-8rem)]">
                 <div className="flex flex-col h-full gap-6">
                     {/* Header */}
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2">
-                            <span className="gradient-text">Smart Notes</span>
-                        </h1>
-                        <p className="text-gray-400">Upload documents or paste text to generate AI-powered summaries and study guides.</p>
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-4xl font-bold mb-2">
+                                <span className="gradient-text">Smart Notes</span>
+                            </h1>
+                            <p className="text-gray-400">
+                                Upload documents or paste text to generate AI-powered summaries and study guides.
+                            </p>
+                        </div>
+
+                        {/* Navigation Button */}
+                        <Link
+                            href="/dashboard/StudyHelper"
+                            className="bg-primary hover:bg-primary/90 text-white 
+             px-10 py-4 text-lg font-semibold 
+             rounded-2xl transition shadow-lg
+             flex items-center justify-center whitespace-nowrap"
+                        >
+                            Lecture Mode
+                        </Link>
                     </div>
 
                     <div className="flex items-start gap-3 h-full min-h-0">
