@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import NoteUploader from '@/components/notes/NoteUploader';
+import FeatureHeader from '@/components/FeatureHeader';
 import NoteEditor from '@/components/notes/NoteEditor';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,8 +70,10 @@ export default function NotesPage() {
 
     return (
         <main className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+            <FeatureHeader title="Smart Notes" />
             <div className="max-w-7xl mx-auto h-[calc(100vh-8rem)]">
                 <div className="flex flex-col h-full gap-6">
+<<<<<<< HEAD:app/dashboard/notes/page.tsx
                     {/* Header */}
                     <div className="flex items-center justify-between gap-4">
                         <div>
@@ -94,6 +97,8 @@ export default function NotesPage() {
                         </Link>
                     </div>
 
+=======
+>>>>>>> efb1a034b64868e016c3f67f07d582dfaed43fc7:app/notes/page.tsx
                     <div className="flex items-start gap-3 h-full min-h-0">
                         {/* Sidebar List */}
                         <div className="w-full md:w-1/3 flex flex-col h-full min-h-0">

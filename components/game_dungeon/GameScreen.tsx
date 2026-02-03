@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { useGameStore } from '@/lib/combine/dungeon_store';
+import { useGameStore } from '@/lib/game_dungeon/dungeon_store';
 import { HeroAvatar } from './HeroAvatar';
 import { CardView } from './CardView';
-import { MOCK_CARDS } from '@/lib/combine/dungeon_mock-cards';
+import { MOCK_CARDS } from '@/lib/game_dungeon/dungeon_mock-cards';
 import { motion } from 'framer-motion';
+import { TopicSelection } from './TopicSelection';
+import { DungeonChat } from './DungeonChat';
+import { GameOverScreen } from './GameOverScreen';
 
 export const GameScreen: React.FC = () => {
     const {
@@ -16,28 +19,39 @@ export const GameScreen: React.FC = () => {
         currentCard,
         nextCard,
         submitAnswer,
-        history
+        history,
+        isGameStarted,
+        currentCards,
+        isGameOver,
     } = useGameStore();
 
-    // Simple game loop: if no card, load next mock card based on score or random
-    // For demo, we just cycle through mock cards randomly or sequentially
+    // Simple game loop: load next card from currentCards
     useEffect(() => {
-        if (!currentCard) {
-            // Check if we are waiting for a boss (every 5 cards)
-            // If history.length > 0 and mod 5 is 0, the store is generating a boss.
-            // So we do NOTHING here and wait for the store to push the boss card.
-            if (history.length > 0 && history.length % 5 === 0) {
+        if (isGameStarted && !currentCard) {
+            // Check if we reached the boss of the current set
+            if (history.length > 0 && history.length % 10 === 0) {
                 return;
             }
 
             // Small delay to simulate "walking" to next room
             const timer = setTimeout(() => {
-                const randomCard = MOCK_CARDS[Math.floor(Math.random() * MOCK_CARDS.length)];
-                nextCard(randomCard);
+                // Pick next card from currentCards if available, or stay in room
+                const nextIndex = history.length % 10;
+                if (currentCards[nextIndex]) {
+                    nextCard(currentCards[nextIndex]);
+                }
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [currentCard, nextCard, history.length]);
+    }, [currentCard, nextCard, history.length, isGameStarted, currentCards]);
+
+    if (!isGameStarted) {
+        return <TopicSelection />;
+    }
+
+    if (isGameOver) {
+        return <GameOverScreen />;
+    }
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 overflow-hidden relative">
@@ -91,6 +105,8 @@ export const GameScreen: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            <DungeonChat />
         </div>
     );
 };

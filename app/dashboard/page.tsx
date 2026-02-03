@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import StreakWidget from '@/components/StreakWidget';
 
 export default function DashboardPage() {
     const [isGuest, setIsGuest] = useState<boolean | null>(null);
@@ -40,14 +41,22 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* Welcome Section */}
-                <div className="mb-12">
-                    <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-4">
-                        Welcome to Your Learning Dashboard
-                    </h1>
-                    <p className="text-xl text-gray-300">
-                        {isGuest ? "Start exploring EduGenius features below" : "Track your progress and continue learning"}
-                    </p>
+                {/* Welcome & Streak Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    <div className="lg:col-span-2 flex flex-col justify-center">
+                        <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-4">
+                            Welcome to Your Learning Dashboard
+                        </h1>
+                        <p className="text-xl text-gray-300">
+                            {isGuest ? "Start exploring EduGenius features below" : "Track your progress and continue learning"}
+                        </p>
+                    </div>
+
+                    {!isGuest && (
+                        <div className="lg:col-span-1">
+                            <StreakWidget />
+                        </div>
+                    )}
                 </div>
 
                 {/* Quick Actions */}
@@ -69,7 +78,7 @@ export default function DashboardPage() {
                             <p className="text-gray-400">Sign up to view notes</p>
                         </div>
                     ) : (
-                        <Link href="/dashboard/notes" className="glass-card hover:border-purple-400/50 transition-all group">
+                        <Link href="/notes" className="glass-card hover:border-purple-400/50 transition-all group">
                             <div className="text-5xl mb-4">📝</div>
                             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
                                 My Notes
@@ -96,15 +105,27 @@ export default function DashboardPage() {
                         </Link>
                     )}
 
-                    <div className="glass-card opacity-50 cursor-not-allowed">
-                        <div className="text-5xl mb-4">📊</div>
-                        <h3 className="text-xl font-bold text-white mb-2">
-                            My Progress {isGuest && "🔒"}
-                        </h3>
-                        <p className="text-gray-400">
-                            {isGuest ? "Sign up to track progress" : "View your learning stats"}
-                        </p>
-                    </div>
+                    {isGuest ? (
+                        <div className="glass-card opacity-50 cursor-not-allowed group">
+                            <div className="text-5xl mb-4">🗓️</div>
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                Study Planner 🔒
+                            </h3>
+                            <p className="text-gray-400">Sign up to plan your study</p>
+                        </div>
+                    ) : (
+                        <Link
+                            href="/study_planner"
+                            className="glass-card hover:border-purple-400/50 transition-all group"
+                        >
+                            <div className="text-5xl mb-4">🗓️</div>
+                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                                Study Planner
+                            </h3>
+                            <p className="text-gray-400">Plan your study</p>
+                        </Link>
+                    )}
+
                 </div>
 
                 {/* Features Overview */}

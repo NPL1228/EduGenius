@@ -6,7 +6,7 @@ import MessageBubble from '@/components/MessageBubble';
 import TypingIndicator from '@/components/TypingIndicator';
 import ImageUploader from '@/components/chat/ImageUploader';
 import VoiceInput from '@/components/chat/VoiceInput';
-import ChatHeader from '@/components/ChatHeader';
+import FeatureHeader from '@/components/FeatureHeader';
 import ChatHistorySidebar, { ChatHistory } from '@/components/chat/ChatHistorySidebar';
 
 const CHAT_HISTORY_KEY = 'chatHistory';
@@ -28,6 +28,7 @@ export default function ChatPage() {
         mimeType: string;
         url: string;
     } | null>(null);
+    const [categories, setCategories] = useState<string[]>(['Math', 'Science', 'Languages', 'History', 'Others']);
 
     // Load chat history from localStorage
     useEffect(() => {
@@ -46,6 +47,18 @@ export default function ChatPage() {
                 setChatHistory(normalized);
             } catch (e) {
                 console.error('Failed to parse chat history', e);
+            }
+        }
+    }, []);
+
+    // Load categories from localStorage
+    useEffect(() => {
+        const storedCategories = localStorage.getItem('chatCategories');
+        if (storedCategories) {
+            try {
+                setCategories(JSON.parse(storedCategories));
+            } catch (e) {
+                console.error('Failed to parse categories', e);
             }
         }
     }, []);
@@ -70,6 +83,16 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages, isLoading]);
 
+    useEffect(() => {
+        // lock page scroll
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            // restore scroll when leaving chat
+            document.body.style.overflow = '';
+        };
+    }, []);
+
 
     // Save current chat to history
     const saveCurrentChat = async (updatedMessages: Message[], chatIdParam?: string, category?: string) => {
@@ -80,6 +103,7 @@ export default function ChatPage() {
         if (userMessages.length === 0) return;
 
         let chatCategory = category;
+        let chatTitle = userMessages[0].content.substring(0, 50) + (userMessages[0].content.length > 50 ? '...' : '');
 
         // If no category provided, categorize using AI (only for first user message)
         if (!category && userMessages.length === 1) {
@@ -87,25 +111,35 @@ export default function ChatPage() {
                 const response = await fetch('/api/gemini/categorize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userMessages[0].content })
+                    body: JSON.stringify({
+                        message: userMessages[0].content,
+                        categories: categories // Pass current categories to API
+                    })
                 });
                 const data = await response.json();
                 chatCategory = data.category;
+                if (data.title) {
+                    chatTitle = data.title;
+                }
             } catch (error) {
                 console.error('Failed to categorize chat', error);
                 chatCategory = 'Others';
             }
         }
 
-        const title = userMessages[0].content.substring(0, 50) + (userMessages[0].content.length > 50 ? '...' : '');
         const now = Date.now();
 
         setChatHistory(prev => {
             const existingIndex = prev.findIndex(chat => chat.id === targetChatId);
+
+            // Use existing title if available (and we didn't just generate a new AI title), otherwise use the calculated/AI title
+            const existingChat = prev[existingIndex];
+            const finalTitle = (existingChat && existingChat.title && !category) ? existingChat.title : chatTitle;
+
             const updatedChat: ChatHistory = {
                 id: targetChatId as string,
-                title,
-                category: (chatCategory as any) || prev[existingIndex]?.category || 'Others',
+                title: finalTitle,
+                category: (chatCategory as any) || existingChat?.category || 'Others',
                 messages: updatedMessages,
                 createdAt: prev[existingIndex]?.createdAt || now,
                 updatedAt: now
@@ -242,6 +276,11 @@ export default function ChatPage() {
         }
     };
 
+    // Save categories
+    useEffect(() => {
+        localStorage.setItem('chatCategories', JSON.stringify(categories));
+    }, [categories]);
+
     const handleDeleteChat = (chatId: string) => {
         setChatHistory(prev => prev.filter(chat => chat.id !== chatId));
         if (currentChatId === chatId) {
@@ -249,10 +288,39 @@ export default function ChatPage() {
         }
     };
 
+    const handleRenameChat = (chatId: string, newTitle: string) => {
+        setChatHistory(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, title: newTitle } : chat
+        ));
+    };
+
+    const handleChangeCategory = (chatId: string, newCategory: string) => {
+        setChatHistory(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, category: newCategory as any } : chat
+        ));
+    };
+
+    const handleAddCategory = (name: string) => {
+        if (!categories.includes(name)) {
+            setCategories(prev => [...prev, name]);
+        }
+    };
+
+    const handleRenameCategory = (oldName: string, newName: string) => {
+        if (categories.includes(newName)) return; // Prevent duplicates
+
+        setCategories(prev => prev.map(c => c === oldName ? newName : c));
+
+        // Update all chats with the old category
+        setChatHistory(prev => prev.map(chat =>
+            chat.category === oldName ? { ...chat, category: newName } : chat
+        ));
+    };
+
     return (
         <div className="h-screen flex flex-col">
             {/* Custom Chat Header */}
-            <ChatHeader />
+            <FeatureHeader title="AI Tutor" />
 
             {/* Main Content: Sidebar + Chat */}
             <div className="flex-1 flex overflow-hidden pt-16">
@@ -264,6 +332,11 @@ export default function ChatPage() {
                         onSelectChat={handleSelectChat}
                         onNewChat={handleNewChat}
                         onDeleteChat={handleDeleteChat}
+                        onRenameChat={handleRenameChat}
+                        onChangeCategory={handleChangeCategory}
+                        categories={categories}
+                        onAddCategory={handleAddCategory}
+                        onRenameCategory={handleRenameCategory}
                     />
                 </div>
 

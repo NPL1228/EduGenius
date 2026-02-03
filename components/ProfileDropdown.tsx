@@ -37,7 +37,7 @@ export default function ProfileDropdown() {
             {/* Profile Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-3 px-4 py-2 rounded-xl glass border border-white/10 hover:border-purple-400/50 transition-all group"
+                className="flex items-center gap-3 px-4 py-1.5 rounded-xl glass border border-white/10 hover:border-purple-400/50 transition-all group"
             >
                 <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-white font-bold shadow-lg group-hover:shadow-purple-500/50 transition-all">
                     {getInitial()}
@@ -60,7 +60,7 @@ export default function ProfileDropdown() {
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 z-50 animate-fadeInUp">
+                <div className="absolute -right-12 mt-2 w-56 z-50 animate-fadeInUp">
                     {/* Glass layer (STATIC, no animation) */}
                     <div className="absolute inset-0 glass rounded-xl pointer-events-none" />
 

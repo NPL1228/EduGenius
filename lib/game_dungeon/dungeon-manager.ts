@@ -7,6 +7,11 @@ export class DungeonManager {
         floorLevel: 1,
         currentCombo: 0,
         history: [],
+        topic: null,
+        isGameStarted: false,
+        currentAttempts: 0,
+        isGameOver: false,
+        chatMessages: [],
     };
 
     static handleIncorrectAnswer(state: GameState, card: Flashcard) {

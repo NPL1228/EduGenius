@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${outfit.variable} antialiased overflow-hidden`}>
+      <body className={`${inter.variable} ${outfit.variable} antialiased`}>
         <AuthProvider>
           <ConditionalNavbar />
           {children}
