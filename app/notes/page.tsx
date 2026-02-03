@@ -10,8 +10,16 @@ import { useNotes } from '@/hooks/useNotes';
 import { Note } from '@/types/notes';
 import Link from 'next/link';
 
-
 export default function NotesPage() {
+    // 🔽 ADD THIS HERE
+    function enhanceNote(markdown: string) {
+        return markdown
+            // add emoji to headings
+            .replace(/^## (.*)$/gm, '## 📌 $1')
+            // slightly emphasize bold words
+            .replace(/\*\*(.*?)\*\*/g, '**$1**');
+    }
+
     const { notes, addNote, updateNote, deleteNote, isLoading } = useNotes();
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +58,8 @@ export default function NotesPage() {
 
             const { summary } = await response.json();
 
+            const enhancedSummary = enhanceNote(summary);
+
             const newNote = addNote({
                 title: data.title,
                 content: summary,
@@ -72,33 +82,23 @@ export default function NotesPage() {
         <main className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
             <FeatureHeader title="Smart Notes" />
             <div className="max-w-7xl mx-auto h-[calc(100vh-8rem)]">
-                <div className="flex flex-col h-full gap-6">
-<<<<<<< HEAD:app/dashboard/notes/page.tsx
-                    {/* Header */}
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-4xl font-bold mb-2">
-                                <span className="gradient-text">Smart Notes</span>
-                            </h1>
-                            <p className="text-gray-400">
-                                Upload documents or paste text to generate AI-powered summaries and study guides.
-                            </p>
-                        </div>
-
-                        {/* Navigation Button */}
-                        <Link
-                            href="/dashboard/StudyHelper"
-                            className="bg-primary hover:bg-primary/90 text-white 
-             px-10 py-4 text-lg font-semibold 
-             rounded-2xl transition shadow-lg
-             flex items-center justify-center whitespace-nowrap"
-                        >
-                            Lecture Mode
-                        </Link>
+                <div className="flex items-center justify-between gap-4 w-full mb-8">
+                    <div>
+                        <h1 className="text-4xl font-bold mb-2">
+                            <span className="gradient-text">Summarise Note</span>
+                        </h1>
+                        <p className="text-gray-400">
+                            Upload your lecture notes and let AI generate summaries for you.
+                        </p>
                     </div>
-
-=======
->>>>>>> efb1a034b64868e016c3f67f07d582dfaed43fc7:app/notes/page.tsx
+                    <Link
+                        href="/lecture"
+                        className="bg-primary hover:bg-primary/90 text-white px-8 py-3 font-semibold rounded-2xl transition shadow-lg whitespace-nowrap"
+                    >
+                        Lecture Mode
+                    </Link>
+                </div>
+                <div className="flex flex-col h-full gap-6">
                     <div className="flex items-start gap-3 h-full min-h-0">
                         {/* Sidebar List */}
                         <div className="w-full md:w-1/3 flex flex-col h-full min-h-0">
