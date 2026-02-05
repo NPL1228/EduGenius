@@ -115,7 +115,7 @@ export default function DashboardPage() {
                         </div>
                     ) : (
                         <Link
-                            href="/study_planner"
+                            href="/planner"
                             className="glass-card hover:border-purple-400/50 transition-all group"
                         >
                             <div className="text-5xl mb-4">🗓️</div>

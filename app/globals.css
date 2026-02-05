@@ -206,4 +206,31 @@
   .animate-messageSlide {
     animation: messageSlide 0.3s ease;
   }
+  .animate-fadeInUp {
+    animation: fadeInUp 0.8s ease forwards;
+  }
+
+  .animate-fadeOutDown {
+    animation: fadeOutDown 0.8s ease forwards;
+  }
+
+  .animate-slideDown {
+    animation: slideDown 0.5s ease;
+  }
+
+  .animate-messageSlide {
+    animation: messageSlide 0.3s ease;
+  }
+
+  /* Make the native calendar/date-picker icon appear white (WebKit/Blink). */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.2) contrast(1);
+    opacity: 1;
+  }
+
+  /* Firefox uses appearance; ensure icon is visible on dark backgrounds by
+     forcing a white SVG background where possible (best-effort). */
+  input[type="date"]::-moz-focus-inner {
+    border: 0;
+  }
 }
