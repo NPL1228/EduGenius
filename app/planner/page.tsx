@@ -56,11 +56,15 @@ export default function PlannerPage() {
     return d.toISOString();
   };
 
+
+
   const [tasks, setTasks] = useState<Task[]>([
-    { id: "1", subject: "Math", title: "Integration Practice", minutes: 45, startTime: getTodayAt(10), color: getSubjectColor("Math") },
-    { id: "2", subject: "CS", title: "BFS Revision", minutes: 30, deadline: addDaysISO(today, 1), startTime: getTodayAt(14), color: getSubjectColor("CS") },
-    { id: "3", subject: "Physics", title: "Chapter 3 Notes", minutes: 60, color: getSubjectColor("Physics") },
-    { id: "4", subject: "English", title: "Essay Draft", minutes: 45, deadline: addDaysISO(today, 3), color: getSubjectColor("English") },
+    { id: "1", subject: "Math", title: "Integration Practice", minutes: 45, deadline: "2026-02-15", color: getSubjectColor("Math"), importance: 80, difficulty: 70 },
+    { id: "2", subject: "CS", title: "BFS Revision", minutes: 30, deadline: "2026-02-12", color: getSubjectColor("CS"), importance: 90, difficulty: 85 },
+    { id: "3", subject: "Physics", title: "Chapter 3 Notes", minutes: 60, deadline: "2026-02-20", color: getSubjectColor("Physics"), importance: 75, difficulty: 80 },
+    { id: "4", subject: "English", title: "Essay Draft", minutes: 45, deadline: "2026-02-18", color: getSubjectColor("English"), importance: 60, difficulty: 50 },
+    { id: "5", subject: "Chemistry", title: "Organic Chemistry Lab", minutes: 90, deadline: "2026-02-25", color: getSubjectColor("Chemistry"), importance: 85, difficulty: 75 },
+    { id: "6", subject: "History", title: "World War Analysis", minutes: 55, deadline: "2026-02-22", color: getSubjectColor("History"), importance: 70, difficulty: 65 },
   ]);
 
 
@@ -258,6 +262,18 @@ export default function PlannerPage() {
     setBlockError(null);
   };
 
+  // Auto-schedule on mount if tasks are unscheduled
+  useEffect(() => {
+    const hasUnscheduled = tasks.some(t => !t.completed && !t.startTime);
+    if (hasUnscheduled) {
+      // Small timeout to ensure state is ready
+      const timer = setTimeout(() => {
+        handleAutoSchedule();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []); // Run once on mount
+
   const handleAutoSchedule = () => {
     setIsLoading(true);
 
@@ -315,14 +331,24 @@ export default function PlannerPage() {
         }
       }
 
-      // Check other tasks
+      // Check other tasks with 30-min buffer
       for (const t of currentScheduled) {
         if (!t.startTime) continue;
         const tStart = new Date(t.startTime);
         if (!areSameDate(tStart, start)) continue;
+
         const tStartH = tStart.getHours() + tStart.getMinutes() / 60;
         const tEndH = tStartH + (t.minutes / 60);
-        if (startH < tEndH && endH > tStartH) return true;
+
+        // Add 30-min (0.5h) buffer AFTER the existing task
+        // We only care if the NEW task starts within the [Start, End + 0.5] of existing task
+        // OR if existing task starts within [NewStart, NewEnd + 0.5] of new task (mutual exclusion)
+
+        // Simpler: treat existing task as occupying [Start, End + 0.5]
+        const cushionedEndH = tEndH + 0.5;
+
+        // Check if new task overlaps with [tStartH, cushionedEndH]
+        if (startH < cushionedEndH && endH > tStartH) return true;
       }
       return false;
     };
@@ -546,7 +572,7 @@ export default function PlannerPage() {
                     <svg className="w-4 h-4 text-gray-500 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                   </button>
                   <div className="px-3 text-xs font-bold text-gray-600 dark:text-gray-300 min-w-[120px] text-center">
-                    {weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    {formatMonthYear(weekStart)} - {formatMonthYear(new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000))}
                   </div>
                   <button onClick={nextWeek} className="p-1.5 hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all shadow-sm group" title="Next Week">
                     <svg className="w-4 h-4 text-gray-500 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -569,7 +595,7 @@ export default function PlannerPage() {
             </div>
 
             <WeeklySchedule
-              tasks={tasks}
+              tasks={tasks.filter(t => !t.completed)}
               currentDate={weekOffset === 0 && selectedDate ? selectedDate : weekStart}
               unavailableTimes={unavailableTimes}
               onSlotClick={(date) => {

@@ -36,16 +36,15 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
     const [tempTask, setTempTask] = useState<Task | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Helpers
-    const getHourFromY = (y: number) => {
-        return Math.max(0, Math.min(23.75, y / PIXELS_PER_HOUR));
-    };
-
     const handlePointerDown = (e: React.PointerEvent, t: Task, action: 'move' | 'resize') => {
         e.preventDefault();
         e.stopPropagation();
         const el = e.currentTarget as HTMLElement;
-        el.setPointerCapture(e.pointerId);
+        try {
+            el.setPointerCapture(e.pointerId);
+        } catch (e) {
+            // ignore
+        }
 
         const start = new Date(t.startTime!);
         const startH = start.getHours() + start.getMinutes() / 60;
@@ -64,23 +63,39 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
         if (!dragState || !tempTask) return;
         e.preventDefault();
 
-        const deltaPixels = e.clientY - dragState.initialY;
-        const deltaHours = deltaPixels / PIXELS_PER_HOUR;
+        const containerRect = containerRef.current?.getBoundingClientRect();
+        if (!containerRect) return;
+
+        // Calculate time change (Y axis)
+        const relY = e.clientY - containerRect.top + containerRef.current!.scrollTop;
+        const hour = Math.max(0, Math.min(23.5, relY / PIXELS_PER_HOUR));
 
         // Snap to 15 min (0.25h)
         const snap = (val: number) => Math.round(val * 4) / 4;
 
         if (dragState.action === 'move') {
-            let newStart = dragState.initialStart + deltaHours;
-            newStart = Math.max(0, Math.min(24 - (tempTask.minutes / 60), newStart));
-            newStart = snap(newStart);
+            // Calculate day change (X axis)
+            const colWidth = containerRect.width / 8;
+            const relX = e.clientX - containerRect.left;
 
-            if (Math.abs(newStart - (new Date(tempTask.startTime!).getHours() + new Date(tempTask.startTime!).getMinutes() / 60)) >= 0.25) {
-                const newDate = new Date(tempTask.startTime!);
-                newDate.setHours(Math.floor(newStart), (newStart % 1) * 60);
+            // Col 0 is time labels, Cols 1-7 are days
+            const colIndex = Math.floor(relX / colWidth);
+            const dayIndex = Math.max(0, Math.min(6, colIndex - 1));
+
+            const newStartHour = snap(hour);
+            const newDate = new Date(weekDates[dayIndex]);
+            newDate.setHours(Math.floor(newStartHour), (newStartHour % 1) * 60, 0, 0);
+
+            // Limit within day bounds based on duration
+            const endHour = newStartHour + (tempTask.minutes / 60);
+
+            if (endHour <= 24) {
                 setTempTask({ ...tempTask, startTime: newDate.toISOString() });
             }
         } else if (dragState.action === 'resize') {
+            const deltaPixels = e.clientY - dragState.initialY;
+            const deltaHours = deltaPixels / PIXELS_PER_HOUR;
+
             let newDuration = dragState.initialDuration + (deltaHours * 60);
             newDuration = Math.max(15, newDuration); // Min 15 mins
             newDuration = Math.round(newDuration / 15) * 15; // Snap to 15m
@@ -95,7 +110,11 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
         if (!dragState || !tempTask) return;
         e.preventDefault();
         const el = e.currentTarget as HTMLElement;
-        el.releasePointerCapture(e.pointerId);
+        try {
+            el.releasePointerCapture(e.pointerId);
+        } catch (e) {
+            // ignore
+        }
 
         onTaskChange?.(tempTask);
         setDragState(null);
@@ -205,9 +224,11 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                     const isDragging = dragState?.taskId === t.id;
                                     const displayTask = isDragging ? tempTask! : t;
 
-                                    // Safety: if dragging moved it to another day, don't show here (handled by isSameDay above? No, tempTask might have changed days)
-                                    // Actually, for simplicity, drag strictly vertical (same day) or if we want multi-day, we need logic.
-                                    // Current logic: `handlePointerMove` handles hour changes only (vertical). So day doesn't change.
+                                    // If we are dragging, we might have moved it to another day
+                                    // But we are inside .map(day), so we only show the task if it belongs to THIS day.
+                                    if (isDragging) {
+                                        if (!isSameDay(new Date(displayTask.startTime!), day)) return null;
+                                    }
 
                                     const start = new Date(displayTask.startTime!);
                                     const startH = start.getHours() + start.getMinutes() / 60;
@@ -290,4 +311,3 @@ function isSameDay(a: Date, b: Date) {
         a.getMonth() === b.getMonth() &&
         a.getFullYear() === b.getFullYear();
 }
-
