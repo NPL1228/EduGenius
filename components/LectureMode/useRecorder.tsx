@@ -11,13 +11,14 @@ export function useRecorder() {
     const [volume, setVolume] = useState(0);
     const [realTimeText, setRealTimeText] = useState("");
     const [notes, setNotes] = useState<SavedNote[]>([]);
+    const [hydrated, setHydrated] = useState(false); // 👈 IMPORTANT
 
     const fullTranscriptRef = useRef("");
     const recognitionRef = useRef<any>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const rafRef = useRef<number | null>(null);
 
-    // Load saved notes on mount
+    // ✅ Load notes ONCE
     useEffect(() => {
         const savedNotes = localStorage.getItem("lecture_notes_history");
         if (savedNotes) {
@@ -25,21 +26,21 @@ export function useRecorder() {
                 setNotes(JSON.parse(savedNotes));
             } catch (e) {
                 console.error("Failed to parse saved notes", e);
-                setNotes([]);
             }
         }
+        setHydrated(true); // 👈 mark as ready
     }, []);
 
-    // Save notes whenever they change
+    // ✅ Save ONLY after hydration
     useEffect(() => {
+        if (!hydrated) return;
         localStorage.setItem("lecture_notes_history", JSON.stringify(notes));
-    }, [notes]);
+    }, [notes, hydrated]);
 
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            // Volume monitoring
             const audioCtx = new AudioContext();
             audioCtxRef.current = audioCtx;
             const source = audioCtx.createMediaStreamSource(stream);
@@ -51,15 +52,14 @@ export function useRecorder() {
 
             const updateVolume = () => {
                 analyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                setVolume(Math.min(sum / dataArray.length, 100));
+                const avg =
+                    dataArray.reduce((sum, v) => sum + v, 0) / dataArray.length;
+                setVolume(Math.min(avg, 100));
                 rafRef.current = requestAnimationFrame(updateVolume);
             };
 
             updateVolume();
 
-            // Speech recognition
             const SpeechRecognition =
                 (window as any).SpeechRecognition ||
                 (window as any).webkitSpeechRecognition;
@@ -71,7 +71,7 @@ export function useRecorder() {
 
             recognition.onresult = (event: any) => {
                 let interim = "";
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
                     const text = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
                         fullTranscriptRef.current += text + " ";
@@ -85,7 +85,7 @@ export function useRecorder() {
             recognition.start();
             recognitionRef.current = recognition;
             setStatus("recording");
-        } catch (err) {
+        } catch {
             alert("Mic access denied");
         }
     };
@@ -96,15 +96,11 @@ export function useRecorder() {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         if (audioCtxRef.current) await audioCtxRef.current.close();
         setVolume(0);
-
         recognitionRef.current?.stop();
 
         const transcript = fullTranscriptRef.current.trim();
-        const wordCount = transcript.split(/\s+/).length;
-
-        // --- Skip short transcripts ---
-        if (wordCount < 20) {
-            alert("Transcript too short. Note will not be created.");
+        if (transcript.split(/\s+/).length < 20) {
+            alert("Transcript too short. Note not saved.");
             fullTranscriptRef.current = "";
             setRealTimeText("");
             setStatus("idle");
@@ -115,27 +111,23 @@ export function useRecorder() {
             const res = await fetch("/api/gemini/StudyHelper", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    transcript,
-                    prompt: userInstruction
-                }),
+                body: JSON.stringify({ transcript, prompt: userInstruction }),
             });
 
             const data = await res.json();
 
-            // Assign an ID
+            const now = new Date();
             const noteId = crypto?.randomUUID?.() ?? Math.random().toString(36) + Date.now().toString(36);
 
-            // Save note with all required properties
             setNotes(prev => [
                 ...prev,
                 {
                     id: noteId,
                     content: data.message || "No content",
-                    createdAt: new Date().toISOString(),
+                    createdAt: now.toISOString(),
+                    createdAtReadable: now.toLocaleString(), // 👈 human-readable timestamp
                 }
             ]);
-
         } catch (err) {
             console.error("Failed to generate note:", err);
         }
@@ -146,7 +138,7 @@ export function useRecorder() {
     };
 
     const deleteNote = (id: string) => {
-        setNotes(prev => prev.filter(note => note.id !== id));
+        setNotes(prev => prev.filter(n => n.id !== id));
     };
 
     return {
