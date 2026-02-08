@@ -226,9 +226,11 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                             `}
                                             style={{
                                                 top: `${top}px`,
-                                                height: `${Math.max(20, height)}px`,
+                                                height: `${Math.max(24, height)}px`,
                                                 backgroundColor: hasConflict ? undefined : (displayTask.color || '#4f46e5'),
-                                                color: 'white' // Assuming dark colors
+                                                color: 'white',
+                                                border: `1px solid ${hasConflict ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.2)'}`,
+                                                boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : 'none',
                                             }}
                                             onPointerDown={(e) => handlePointerDown(e, t, 'move')}
                                             onPointerMove={handlePointerMove}
@@ -238,16 +240,23 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                                 if (!dragState) onTaskClick?.(t);
                                             }}
                                         >
-                                            {hasConflict && <div className="absolute top-0 right-0 p-1 text-red-500 font-bold bg-white/80 rounded-bl-lg">!</div>}
-                                            <div className="font-bold truncate pointer-events-none">{displayTask.subject}</div>
+                                            {hasConflict && (
+                                                <div className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-bl-lg z-20 shadow-sm flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                    </svg>
+                                                    <span className="text-[8px] font-black uppercase">Conflict</span>
+                                                </div>
+                                            )}
+                                            <div className="font-bold truncate pointer-events-none pr-6">{displayTask.subject}</div>
                                             <div className="opacity-90 truncate text-[10px] pointer-events-none">{displayTask.title}</div>
 
                                             {/* Resize Handle */}
                                             <div
-                                                className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize flex justify-center items-end hover:bg-black/10"
+                                                className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize flex justify-center items-end hover:bg-black/10 group/resize"
                                                 onPointerDown={(e) => handlePointerDown(e, t, 'resize')}
                                             >
-                                                <div className="w-8 h-1 bg-white/30 rounded-full mb-1" />
+                                                <div className="w-8 h-1 bg-white/30 group-hover/resize:bg-white/60 rounded-full mb-1 transition-colors" />
                                             </div>
                                         </div>
                                     );

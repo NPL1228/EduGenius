@@ -1,9 +1,19 @@
 
+
 "use client";
 
 import FeatureHeader from '@/components/FeatureHeader';
 import WeeklySchedule from '@/components/WeeklySchedule';
+import TaskModal from '@/components/TaskModal';
 import { useEffect, useMemo, useState } from "react";
+
+export type UnavailableTime = {
+  id: string;
+  startHour: number;
+  endHour: number;
+  days: number[]; // 0=Mon, ... 6=Sun (or based on WEEK_DAYS index)
+  label: string;
+};
 
 export type Task = {
   id: string;
@@ -13,7 +23,23 @@ export type Task = {
   deadline?: string;
   completed?: boolean;
   startTime?: string; // ISO string for the start time
+  importance?: number; // 0-100
+  difficulty?: number; // 0-100
+  color?: string;
+  notes?: string;
+  isPinned?: boolean; // If true, AI won't re-schedule this task
 };
+
+const SUBJECT_COLORS: Record<string, string> = {
+  Math: "#3b82f6", // Blue
+  CS: "#8b5cf6",   // Violet
+  Physics: "#ec4899", // Pink
+  English: "#f59e0b", // Amber
+  Chemistry: "#10b981", // Emerald
+  History: "#ef4444", // Red
+};
+
+const getSubjectColor = (subject: string) => SUBJECT_COLORS[subject] || "#6366f1"; // Default Indigo
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -31,13 +57,13 @@ export default function PlannerPage() {
   };
 
   const [tasks, setTasks] = useState<Task[]>([
-    { id: "1", subject: "Math", title: "Integration Practice", minutes: 45, startTime: getTodayAt(10) },
-    { id: "2", subject: "CS", title: "BFS Revision", minutes: 30, deadline: addDaysISO(today, 1), startTime: getTodayAt(14) },
-    { id: "3", subject: "Physics", title: "Chapter 3 Notes", minutes: 60 },
-    { id: "4", subject: "English", title: "Essay Draft", minutes: 45, deadline: addDaysISO(today, 3) },
+    { id: "1", subject: "Math", title: "Integration Practice", minutes: 45, startTime: getTodayAt(10), color: getSubjectColor("Math") },
+    { id: "2", subject: "CS", title: "BFS Revision", minutes: 30, deadline: addDaysISO(today, 1), startTime: getTodayAt(14), color: getSubjectColor("CS") },
+    { id: "3", subject: "Physics", title: "Chapter 3 Notes", minutes: 60, color: getSubjectColor("Physics") },
+    { id: "4", subject: "English", title: "Essay Draft", minutes: 45, deadline: addDaysISO(today, 3), color: getSubjectColor("English") },
   ]);
 
-  const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
+
 
   const [selectedDayOffset, setSelectedDayOffset] = useState<number>(0);
   const [aiSuggestion, setAiSuggestion] = useState<string>(
@@ -46,6 +72,9 @@ export default function PlannerPage() {
   const [dark, setDark] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, etc.
+  const [showHistory, setShowHistory] = useState(false);
   const [newTask, setNewTask] = useState<{ subject: string; title: string; estimated_minutes: number; deadline: string; startTime: string; importance: number; difficulty: number }>({
     subject: 'Math',
     title: '',
@@ -56,11 +85,39 @@ export default function PlannerPage() {
     difficulty: 50,
   });
 
+  const [unavailableTimes, setUnavailableTimes] = useState<UnavailableTime[]>([
+    { id: "sleep", label: "Sleep", startHour: 23, endHour: 7, days: [0, 1, 2, 3, 4, 5, 6] },
+    { id: "lunch", label: "Lunch", startHour: 12, endHour: 13, days: [0, 1, 2, 3, 4, 5, 6] },
+  ]);
+  const [isAutoScheduleOpen, setIsAutoScheduleOpen] = useState(false);
+  const [autoScheduleConfig, setAutoScheduleConfig] = useState({
+    maxStudyHoursPerDay: 6,
+  });
+
+  // State for the "Add Block" form
+  const [isAddingBlock, setIsAddingBlock] = useState(false);
+  const [newBlock, setNewBlock] = useState<UnavailableTime>({
+    id: "",
+    label: "",
+    startHour: 9,
+    endHour: 10,
+    days: [],
+  });
+  const [blockError, setBlockError] = useState<string | null>(null);
+
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const weekStart = startOfWeek(today);
+  const weekStart = useMemo(() => {
+    const start = startOfWeek(today);
+    start.setDate(start.getDate() + (weekOffset * 7));
+    return start;
+  }, [weekOffset]);
+
+  function prevWeek() { setWeekOffset(prev => prev - 1); }
+  function nextWeek() { setWeekOffset(prev => prev + 1); }
+  function resetWeek() { setWeekOffset(0); }
 
   const days = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
@@ -109,61 +166,196 @@ export default function PlannerPage() {
   }
 
   function addNewTask() {
-    // Open modal/dialog to add task
+    setSelectedTask(null);
     setIsDialogOpen(true);
   }
 
-  const handleAddTask = async () => {
-    if (!newTask.title.trim()) return;
+  const handleSaveTask = (taskData: Partial<Task>) => {
+    if (!taskData.title?.trim()) return;
 
-    setIsLoading(true);
-    try {
-      // If a real API exists on window, use it; otherwise fallback to local state
-      const payload = {
-        subject: newTask.subject,
-        title: newTask.title,
-        estimated_minutes: newTask.estimated_minutes,
-        deadline: newTask.deadline || null,
-        startTime: newTask.startTime || undefined,
+    if (taskData.id) {
+      // Update existing task
+      setTasks(prev => prev.map(t => t.id === taskData.id ? { ...t, ...taskData, isPinned: true } as Task : t));
+    } else {
+      // Add new task
+      const newTaskObj: Task = {
+        id: String(Date.now()),
+        subject: taskData.subject || 'Math',
+        title: taskData.title,
+        minutes: taskData.minutes || 30,
+        deadline: taskData.deadline || undefined,
+        startTime: taskData.startTime || undefined,
+        importance: taskData.importance || 50,
+        difficulty: taskData.difficulty || 50,
+        color: taskData.color || getSubjectColor(taskData.subject || 'Math'),
+        notes: taskData.notes || '',
         completed: false,
+        isPinned: !!taskData.startTime, // Pin if scheduled manually
       };
+      setTasks(prev => [newTaskObj, ...prev]);
+    }
 
-      if ((window as any).taskApi?.createTask) {
-        await (window as any).taskApi.createTask(payload);
-        // In a real app you'd refresh from server here (onTasksChange or fetch)
-        setTasks((s) => [
-          {
-            id: String(Date.now()),
-            subject: payload.subject,
-            title: payload.title,
-            minutes: payload.estimated_minutes,
-            deadline: payload.deadline || undefined,
-          },
-          ...s,
-        ]);
-      } else {
-        // Local fallback
-        setTasks((s) => [
-          {
-            id: String(Date.now()),
-            subject: payload.subject,
-            title: payload.title,
-            minutes: payload.estimated_minutes,
-            deadline: payload.deadline || undefined,
-          },
-          ...s,
-        ]);
+    setIsDialogOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setIsDialogOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleAddTask = async () => {
+    // This function is being replaced by handleSaveTask for the modal
+    // but kept for any legacy calls if any.
+    handleSaveTask({ title: newTask.title, subject: newTask.subject, minutes: newTask.estimated_minutes });
+  };
+
+  const removeUnavailable = (id: string) => {
+    setUnavailableTimes(s => s.filter(t => t.id !== id));
+  };
+
+  const validateAndAddBlock = () => {
+    if (!newBlock.label.trim()) {
+      setBlockError("Label is required.");
+      return;
+    }
+    if (newBlock.days.length === 0) {
+      setBlockError("Select at least one day.");
+      return;
+    }
+    if (newBlock.startHour >= newBlock.endHour && !(newBlock.startHour > 12 && newBlock.endHour < 12)) {
+      // Basic check, though some blocks might wrap midnight. 
+      // User request says "Start time must be earlier than end time".
+      if (newBlock.startHour >= newBlock.endHour) {
+        setBlockError("Start time must be earlier than end time.");
+        return;
+      }
+    }
+
+    // Overlap check
+    const hasOverlap = unavailableTimes.some(existing => {
+      const sameDays = existing.days.filter(d => newBlock.days.includes(d));
+      if (sameDays.length === 0) return false;
+
+      const eStart = existing.startHour;
+      const eEnd = existing.endHour;
+      const nStart = newBlock.startHour;
+      const nEnd = newBlock.endHour;
+
+      // Overlap: max(start1, start2) < min(end1, end2)
+      return Math.max(eStart, nStart) < Math.min(eEnd, nEnd);
+    });
+
+    if (hasOverlap) {
+      setBlockError("This block overlaps with an existing unavailable time on one of the selected days.");
+      return;
+    }
+
+    setUnavailableTimes(s => [...s, { ...newBlock, id: String(Date.now()) }]);
+    setIsAddingBlock(false);
+    setNewBlock({ id: "", label: "", startHour: 9, endHour: 10, days: [] });
+    setBlockError(null);
+  };
+
+  const handleAutoSchedule = () => {
+    setIsLoading(true);
+
+    // 1. We now use unavailableTimes state directly
+    // 2. Schedule Tasks
+    const pinnedTasks = tasks.filter(t => t.isPinned && !t.completed);
+    const tasksToSchedule = tasks.filter(t => !t.completed && !t.isPinned);
+    const completedTasks = tasks.filter(t => t.completed);
+
+    // Advanced Priority Scoring: Hard + Important + Deadlines -> Higher score
+    const sortedTasks = [...tasksToSchedule].sort((a, b) => {
+      const getScore = (t: Task) => {
+        const imp = t.importance || 50;
+        const diff = t.difficulty || 50;
+        let urgency = 0;
+        if (t.deadline) {
+          const daysLeft = diffDaysISO(t.deadline, today);
+          urgency = daysLeft <= 0 ? 1000 : 500 / daysLeft;
+        }
+        return (imp * 3) + (diff * 2) + urgency;
+      };
+      return getScore(b) - getScore(a);
+    });
+
+    const scheduledTasks: Task[] = [...pinnedTasks];
+    const dailyMinutes: Record<string, number> = {};
+
+    // Initialize dailyMinutes with pinned tasks
+    for (const t of pinnedTasks) {
+      if (t.startTime) {
+        const dateKey = t.startTime.split('T')[0];
+        dailyMinutes[dateKey] = (dailyMinutes[dateKey] || 0) + t.minutes;
+      }
+    }
+
+    const checkCollision = (start: Date, durationMinutes: number, currentScheduled: Task[]) => {
+      const startH = start.getHours() + start.getMinutes() / 60;
+      const endH = startH + (durationMinutes / 60);
+      const dayIndex = (start.getDay() + 6) % 7;
+
+      // Check daily limit
+      const dateKey = start.toISOString().split('T')[0];
+      if ((dailyMinutes[dateKey] || 0) + durationMinutes > autoScheduleConfig.maxStudyHoursPerDay * 60) return true;
+
+      // Check unavailable blocks
+      for (const ut of unavailableTimes) {
+        if (ut.days.includes(dayIndex)) {
+          const uRanges = ut.startHour > ut.endHour
+            ? [[ut.startHour, 24], [0, ut.endHour]]
+            : [[ut.startHour, ut.endHour]];
+
+          for (const [uS, uE] of uRanges) {
+            if (startH < uE && endH > uS) return true;
+          }
+        }
       }
 
-      // Reset form and close dialog
-      setNewTask({ subject: 'Math', title: '', estimated_minutes: 30, deadline: '', startTime: '', importance: 50, difficulty: 50 });
-      setIsDialogOpen(false);
-      // onTasksChange placeholder: in a real app call parent refresh
-    } catch (error) {
-      console.error('Failed to create task:', error);
-    } finally {
-      setIsLoading(false);
+      // Check other tasks
+      for (const t of currentScheduled) {
+        if (!t.startTime) continue;
+        const tStart = new Date(t.startTime);
+        if (!areSameDate(tStart, start)) continue;
+        const tStartH = tStart.getHours() + tStart.getMinutes() / 60;
+        const tEndH = tStartH + (t.minutes / 60);
+        if (startH < tEndH && endH > tStartH) return true;
+      }
+      return false;
+    };
+
+    for (const t of sortedTasks) {
+      let assigned = false;
+      // Search up to 4 weeks (28 days) ahead
+      for (let d = 0; d < 28; d++) {
+        const dayDate = new Date(startOfWeek(today));
+        dayDate.setDate(dayDate.getDate() + d);
+
+        for (let h = (d === 0 ? today.getHours() + today.getMinutes() / 60 + 0.5 : 0); h < 24; h += 0.5) {
+          const slot = new Date(dayDate);
+          slot.setHours(Math.floor(h), (h % 1) * 60, 0, 0);
+
+          if (slot < new Date()) continue;
+
+          if (!checkCollision(slot, t.minutes, scheduledTasks)) {
+            scheduledTasks.push({ ...t, startTime: slot.toISOString() });
+            const dateKey = slot.toISOString().split('T')[0];
+            dailyMinutes[dateKey] = (dailyMinutes[dateKey] || 0) + t.minutes;
+            assigned = true;
+            break;
+          }
+        }
+        if (assigned) break;
+      }
+      if (!assigned) scheduledTasks.push(t);
     }
+
+    setTasks([...completedTasks, ...scheduledTasks]);
+    setIsAutoScheduleOpen(false);
+    setIsLoading(false);
   };
 
   function generateSuggestion() {
@@ -193,18 +385,33 @@ export default function PlannerPage() {
       <div className="pt-16">
         <div className="max-w-6xl mx-auto space-y-8">
           <section className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm">
+            <div className="lg:col-span-2 bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col h-[350px]">
               <h2 className="text-lg font-semibold mb-4">Today’s Study Plan</h2>
-              <div className="space-y-3">
-                {tasks.slice(0, 4).map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-white/5">
-                    <div>
-                      <div className="font-semibold">{t.subject} – {t.title}</div>
-                      {t.deadline && <div className="text-xs text-gray-500">Deadline: {t.deadline}</div>}
+              <div className="space-y-3 overflow-y-auto flex-1 pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+                {tasks
+                  .filter(t => t.startTime && areSameDate(new Date(t.startTime), today))
+                  .sort((a, b) => (a.startTime! > b.startTime! ? 1 : -1))
+                  .map((t) => (
+                    <div key={t.id} onClick={() => { setSelectedTask(t); setIsDialogOpen(true); }} className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-white/5 border border-gray-100/50 dark:border-white/5 hover:border-primary/30 transition-all cursor-pointer group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: t.color || '#4f46e5' }} />
+                        <div>
+                          <div className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">{t.subject} – {t.title}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {new Date(t.startTime!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs font-semibold px-2 py-1 rounded-lg bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-white/5">{t.minutes} min</div>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">{t.minutes} min</div>
+                  ))}
+                {tasks.filter(t => t.startTime && areSameDate(new Date(t.startTime), today)).length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-2 opacity-60">
+                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <p className="text-sm italic">Focus on rest or add a task to your schedule!</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -243,7 +450,6 @@ export default function PlannerPage() {
               <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
                 <div className="font-semibold">Selected:</div>
                 <div className="mt-1">{selectedDate ? selectedDate.toDateString() : 'None'}</div>
-
               </div>
 
               {/* Panel showing tasks for selected date */}
@@ -269,63 +475,123 @@ export default function PlannerPage() {
             </aside>
           </section>
 
-          <section className="bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm">
+          <section className="bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm flex flex-col h-[350px]">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Study Tasks</h2>
-              <div className="flex items-center bg-gray-100 dark:bg-white/10 rounded-lg p-1">
+              <h2 className="text-lg font-semibold">{showHistory ? 'Task History' : 'Study Tasks'}</h2>
+              {!showHistory && (
                 <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-3 py-1 text-sm rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                  onClick={addNewTask}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                  title="Add Task"
                 >
-                  List
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 </button>
+              )}
+            </div>
+            <div className="space-y-3 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800">
+              {tasks
+                .filter(t => showHistory ? t.completed : !t.completed)
+                .map((t) => (
+                  <div key={t.id} className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center gap-3 group">
+                    <button
+                      onClick={() => toggleComplete(t.id)}
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${t.completed ? 'bg-primary border-primary text-white' : 'border-gray-300 dark:border-white/20 hover:border-primary'}`}
+                      aria-label={t.completed ? "Mark as pending" : "Mark as completed"}
+                    >
+                      {t.completed && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </button>
+                    <div className="flex-1 min-w-0 pointer-events-none">
+                      <div className={`text-sm font-bold truncate ${t.completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>{t.title}</div>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">{t.subject} • {t.minutes}m {t.deadline && `• Due ${t.deadline}`}</div>
+                    </div>
+                    {!t.completed && (
+                      <button
+                        onClick={() => { setSelectedTask(t); setIsDialogOpen(true); }}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-all"
+                        title="Edit Task"
+                      >
+                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              {tasks.filter(t => showHistory ? t.completed : !t.completed).length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60 text-center py-4">
+                  <p className="text-xs italic">{showHistory ? 'No completed tasks yet.' : 'All caught up!'}</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-primary transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {showHistory
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  }
+                </svg>
+                {showHistory ? 'Back to Pending' : 'Task History'}
+              </button>
+            </div>
+          </section>
+
+          <section className="bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-semibold">Weekly Planner</h2>
+                <div className="flex items-center bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/5">
+                  <button onClick={prevWeek} className="p-1.5 hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all shadow-sm group" title="Previous Week">
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="px-3 text-xs font-bold text-gray-600 dark:text-gray-300 min-w-[120px] text-center">
+                    {weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} - {new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  </div>
+                  <button onClick={nextWeek} className="p-1.5 hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all shadow-sm group" title="Next Week">
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+                {weekOffset !== 0 && (
+                  <button onClick={resetWeek} className="text-[10px] font-bold text-primary hover:underline">Today</button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setViewMode('week')}
-                  className={`px-3 py-1 text-sm rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-white/10 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                  onClick={() => setIsAutoScheduleOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-lg hover:opacity-90 transition-opacity shadow-sm"
                 >
-                  Week
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  AI Auto-Schedule
                 </button>
+                <div className="text-xs text-gray-500">Drag to reschedule</div>
               </div>
             </div>
 
-            {viewMode === 'week' ? (
-              <WeeklySchedule
-                tasks={tasks}
-                currentDate={selectedDate || new Date()}
-                onSlotClick={(date) => {
-                  setNewTask(prev => ({
-                    ...prev,
-                    startTime: date.toISOString(), // Pre-fill start time
-                    deadline: date.toISOString().slice(0, 10) // Pre-fill deadline as same day
-                  }));
-                  setIsDialogOpen(true);
-                }}
-                onTaskClick={(t) => {
-                  alert(`Clicked task: ${t.title}`);
-                }}
-              />
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {(selectedDate ? tasks.filter((t) => t.deadline === selectedDate.toISOString().slice(0, 10)) : tasks).map((t) => (
-                    <div key={t.id} className={`flex items-center justify-between p-3 rounded-lg ${t.deadline ? 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400/40' : 'bg-gray-50 dark:bg-white/5'}`}>
-                      <div className="flex items-center gap-3">
-                        <input type="checkbox" checked={!!t.completed} onChange={() => toggleComplete(t.id)} className="w-4 h-4" />
-                        <div className="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900/30">{t.subject}</div>
-                        <div>
-                          <div className="font-medium">{t.title}</div>
-                          {t.deadline && <div className="text-xs text-gray-500">Deadline: {t.deadline}</div>}
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{Math.round(t.minutes / 60) ? `${Math.round(t.minutes / 60)} hr` : `${t.minutes} min`}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <button onClick={addNewTask} className="px-4 py-2 bg-primary text-white rounded-lg">+ Add New Task</button>
-                </div>
-              </>
-            )}
+            <WeeklySchedule
+              tasks={tasks}
+              currentDate={weekOffset === 0 && selectedDate ? selectedDate : weekStart}
+              unavailableTimes={unavailableTimes}
+              onSlotClick={(date) => {
+                setSelectedTask({
+                  id: "",
+                  subject: "Math",
+                  title: "",
+                  minutes: 30,
+                  startTime: date.toISOString(),
+                  deadline: date.toISOString().slice(0, 10),
+                  color: getSubjectColor("Math"),
+                });
+                setIsDialogOpen(true);
+              }}
+              onTaskClick={(t) => {
+                setSelectedTask(t);
+                setIsDialogOpen(true);
+              }}
+              onTaskChange={(t) => {
+                setTasks(s => s.map(x => x.id === t.id ? { ...t, isPinned: true } : x));
+              }}
+            />
           </section>
 
           <section className="bg-gray-50 dark:bg-white/5 rounded-2xl p-6 text-center">
@@ -346,7 +612,7 @@ export default function PlannerPage() {
                   <div key={sub} className="flex items-center gap-4">
                     <div className="w-24 text-sm">{sub}</div>
                     <div className="flex-1 h-3 bg-white/10 rounded overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${Math.min(100, (mins / Math.max(1, totalMinutes)) * 100)}%` }} />
+                      <div className="h-full bg-primary" style={{ width: `${Math.min(100, (mins / Math.max(1, totalMinutes)) * 100)}%` }} aria-label={`${sub} percentage`} />
                     </div>
                     <div className="w-16 text-right text-sm">{mins}m</div>
                   </div>
@@ -364,56 +630,173 @@ export default function PlannerPage() {
               </div>
             </div>
           </section>
-
-          {isDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/40" onClick={() => !isLoading && setIsDialogOpen(false)} />
-              <div className="relative bg-white dark:bg-[#071024] rounded-xl p-6 w-full max-w-md shadow-xl z-10">
-                <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-gray-500">Subject</label>
-                    <input value={newTask.subject} onChange={(e) => setNewTask(s => ({ ...s, subject: e.target.value }))} className="w-full mt-1 p-2 rounded-md border bg-white text-gray-900 dark:bg-[#071a2a] dark:text-gray-100 border-gray-200 dark:border-white/10" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Title</label>
-                    <input value={newTask.title} onChange={(e) => setNewTask(s => ({ ...s, title: e.target.value }))} className="w-full mt-1 p-2 rounded-md border bg-white text-gray-900 dark:bg-[#071a2a] dark:text-gray-100 border-gray-200 dark:border-white/10" />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="text-xs text-gray-500">Estimated minutes</label>
-                      <input type="number" value={newTask.estimated_minutes} onChange={(e) => setNewTask(s => ({ ...s, estimated_minutes: Number(e.target.value) }))} className="w-full mt-1 p-2 rounded-md border bg-white text-gray-900 dark:bg-[#071a2a] dark:text-gray-100 border-gray-200 dark:border-white/10" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-gray-500">Deadline</label>
-                      <input type="date" value={newTask.deadline} onChange={(e) => setNewTask(s => ({ ...s, deadline: e.target.value }))} className="w-full mt-1 p-2 rounded-md border bg-white text-gray-900 dark:bg-[#071a2a] dark:text-gray-100 border-gray-200 dark:border-white/10" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-gray-500">Subject importance: <span className="font-medium">{newTask.importance}</span></label>
-                      <input aria-label="importance" type="range" min={0} max={100} value={newTask.importance} onChange={(e) => setNewTask(s => ({ ...s, importance: Number(e.target.value) }))} className="w-full mt-1" />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-500">Difficulty level: <span className="font-medium">{newTask.difficulty}</span></label>
-                      <input aria-label="difficulty" type="range" min={0} max={100} value={newTask.difficulty} onChange={(e) => setNewTask(s => ({ ...s, difficulty: Number(e.target.value) }))} className="w-full mt-1" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 mt-4">
-                    <button onClick={() => setIsDialogOpen(false)} disabled={isLoading} className="px-4 py-2 rounded-md border">Cancel</button>
-                    <button onClick={handleAddTask} disabled={isLoading} className="px-4 py-2 bg-primary text-white rounded-md">{isLoading ? 'Adding…' : 'Add Task'}</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <footer className="text-center text-xs text-gray-500 dark:text-gray-400 py-6">
-            Designed for focused study • <button onClick={() => setDark((d) => !d)} className="underline">Toggle dark mode</button>
-          </footer>
         </div>
       </div>
+
+      {isAutoScheduleOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsAutoScheduleOpen(false)} />
+          <div className="relative bg-white dark:bg-[#071024] rounded-xl p-6 w-full max-w-lg shadow-xl z-10 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <span className="text-xl">✨</span> AI Auto-Scheduler
+              </h3>
+              <button onClick={() => setIsAutoScheduleOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Close Auto-Scheduler">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">Unavailable Time Blocks</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
+                  {unavailableTimes.map(ut => (
+                    <div key={ut.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 group">
+                      <div>
+                        <div className="text-sm font-semibold">{ut.label}</div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-tighter">
+                          {ut.startHour}:00 - {ut.endHour}:00 • {ut.days.map(d => WEEK_DAYS[d]).join(', ')}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeUnavailable(ut.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                        title="Remove Block"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {unavailableTimes.length === 0 && (
+                    <div className="text-center py-6 border-2 border-dashed border-gray-100 dark:border-white/5 rounded-lg text-xs text-gray-500">
+                      No unavailable blocks set.
+                    </div>
+                  )}
+                </div>
+
+                {!isAddingBlock ? (
+                  <button
+                    onClick={() => setIsAddingBlock(true)}
+                    className="w-full mt-3 py-2 border-2 border-dashed border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-500 hover:text-primary hover:border-primary transition-all"
+                  >
+                    + Add Block (Class, Work, Gym, etc.)
+                  </button>
+                ) : (
+                  <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="text-[10px] font-bold uppercase text-primary/70">Block Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Morning Classes"
+                          value={newBlock.label}
+                          onChange={e => setNewBlock(s => ({ ...s, label: e.target.value }))}
+                          className="w-full mt-1 p-2 rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0b1a2b] text-sm"
+                          aria-label="Block Title"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-primary/70">Start (24h)</label>
+                        <input
+                          type="number" min="0" max="23"
+                          value={newBlock.startHour}
+                          onChange={e => setNewBlock(s => ({ ...s, startHour: Number(e.target.value) }))}
+                          className="w-full mt-1 p-2 rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0b1a2b] text-sm"
+                          aria-label="Start Hour"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-primary/70">End (24h)</label>
+                        <input
+                          type="number" min="0" max="23"
+                          value={newBlock.endHour}
+                          onChange={e => setNewBlock(s => ({ ...s, endHour: Number(e.target.value) }))}
+                          className="w-full mt-1 p-2 rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0b1a2b] text-sm"
+                          aria-label="End Hour"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-primary/70 mb-2 block">Day Selection</label>
+                      <div className="flex flex-wrap gap-1">
+                        {WEEK_DAYS.map((day, idx) => (
+                          <button
+                            key={day}
+                            onClick={() => setNewBlock(s => ({
+                              ...s,
+                              days: s.days.includes(idx) ? s.days.filter(d => d !== idx) : [...s.days, idx]
+                            }))}
+                            className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-colors ${newBlock.days.includes(idx) ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}
+                          >
+                            {day}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {blockError && (
+                      <div className="text-[10px] text-red-500 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded-md">
+                        ⚠️ {blockError}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button onClick={() => { setIsAddingBlock(false); setBlockError(null); }} className="flex-1 py-2 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-white/10">Cancel</button>
+                      <button onClick={validateAndAddBlock} className="flex-1 py-2 text-xs font-medium bg-primary text-white rounded-lg shadow-lg shadow-primary/20">Save Block</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-100 dark:border-white/5 pt-4">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Max Study Hours / Day</label>
+                <div className="flex items-center gap-4 mt-2">
+                  <input
+                    type="range" min="1" max="16" step="0.5"
+                    value={autoScheduleConfig.maxStudyHoursPerDay}
+                    onChange={(e) => setAutoScheduleConfig(s => ({ ...s, maxStudyHoursPerDay: Number(e.target.value) }))}
+                    className="flex-1"
+                    aria-label="Max Study Hours Per Day"
+                  />
+                  <div className="text-sm font-bold text-primary">{autoScheduleConfig.maxStudyHoursPerDay}h</div>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">The AI will distribute your tasks without exceeding this limit.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-8">
+              <button
+                onClick={() => setIsAutoScheduleOpen(false)}
+                className="px-6 py-2.5 text-sm font-medium rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAutoSchedule}
+                disabled={isLoading || isAddingBlock}
+                className="px-8 py-2.5 text-sm font-bold bg-primary text-white rounded-xl shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
+              >
+                {isLoading ? 'Optimizing...' : 'Generate Schedule'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <TaskModal
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+        initialTask={selectedTask}
+        getSubjectColor={getSubjectColor}
+      />
+
+      <footer className="text-center text-xs text-gray-500 dark:text-gray-400 py-6">
+        Designed for focused study • <button onClick={() => setDark((d) => !d)} className="underline">Toggle dark mode</button>
+      </footer>
     </main>
   );
 }
