@@ -7,7 +7,7 @@ export default function ConditionalNavbar() {
     const pathname = usePathname();
 
     // Hide navbar on feature pages
-    if (pathname === '/chat' || pathname?.startsWith('/game_dungeon') || pathname === '/notes') {
+    if (pathname === '/chat' || pathname?.startsWith('/game_dungeon') || pathname === '/notes' || pathname === '/planner') {
         return null;
     }
 
