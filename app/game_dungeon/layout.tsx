@@ -25,7 +25,7 @@ export default function CombineLayout({
     <div
       className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
     >
-      <FeatureHeader title="Dungeon Manager" />
+      <FeatureHeader title="Game Dungeon" />
       <div className="pt-16">
         {children}
       </div>

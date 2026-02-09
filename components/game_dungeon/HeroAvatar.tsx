@@ -12,7 +12,8 @@ export const HeroAvatar: React.FC<HeroAvatarProps> = ({ hp, maxHp = 100 }) => {
 
     return (
         <div className="flex flex-col items-center gap-2 p-4 bg-slate-800 rounded-xl border-2 border-slate-600 shadow-lg w-full max-w-xs">
-            <div className="relative w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center border-4 border-white shadow overflow-hidden">
+            <div className="relative w-24 h-24 bg-blue-500 rounded-full flex flex-col items-center justify-center border-4 border-white shadow overflow-hidden">
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider mb-1">Hero</span>
                 {/* Placeholder for Hero Sprite */}
                 <motion.div
                     animate={{ y: [0, -5, 0] }}
