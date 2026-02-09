@@ -15,151 +15,153 @@ export default function FeaturesPage() {
                     </p>
                 </div>
 
-                {/* Core Learning Features */}
-                <section className="mb-20">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center gradient-text mb-12">
-                        Core Learning Capabilities
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FeatureCard
-                            icon="💡"
-                            title="Instant Explanations"
-                            description="Get clear, detailed explanations for any topic. Our AI breaks down complex concepts into easy-to-understand language tailored to your level."
-                        />
-                        <FeatureCard
-                            icon="🎯"
-                            title="Guided Problem Solving"
-                            description="Stuck on a problem? Get step-by-step guidance without just giving away the answer. Learn the process, not just the solution."
-                        />
-                        <FeatureCard
-                            icon="🧩"
-                            title="Concept Breakdown"
-                            description="Complex topics made simple. We break down difficult concepts into smaller, digestible pieces that build on each other."
-                        />
-                        <FeatureCard
-                            icon="📝"
-                            title="Practice Problems"
-                            description="Generate unlimited practice problems similar to what you're studying. Perfect for reinforcing your understanding."
-                        />
-                        <FeatureCard
-                            icon="🎓"
-                            title="Progressive Hints"
-                            description="Get hints that guide you towards the solution without giving it away. Multiple hint levels help you find the answer yourself."
-                        />
-                        <FeatureCard
-                            icon="✅"
-                            title="Understanding Checks"
-                            description="Quick quizzes to test your comprehension. Make sure you truly understand before moving forward."
-                        />
-                    </div>
-                </section>
+                {/* Core Features */}
+                <section className="mb-24">
+                    <div className="space-y-24">
+                        {/* AI Tutor */}
+                        <div className="flex flex-col md:flex-row gap-12 items-center">
+                            <div className="flex-1 space-y-6">
+                                <div className="text-5xl mb-4">🤖</div>
+                                <h2 className="text-3xl md:text-4xl font-bold gradient-text">
+                                    Intelligent AI Tutor
+                                </h2>
+                                <p className="text-xl text-gray-300">
+                                    Your personal 24/7 study companion. It's more than just a chatbot—it's a multimodal tutor that can see, hear, and understand.
+                                </p>
+                                <ul className="space-y-4 text-gray-400">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Multimodal Input:</strong> Upload images of complex math problems or diagrams, or use voice commands to ask questions naturally.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Context-Aware Explanations:</strong> Get instant, step-by-step breakdowns of any concept, tailored to your learning style.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Interactive Chat:</strong> Engage in deep conversations with history context, allowing for follow-up questions and clarifications.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex-1 w-full relative">
+                                <div className="glass-card p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/10 to-blue-500/10">
+                                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 opacity-20 blur-lg"></div>
+                                    <div className="relative space-y-4">
+                                        <div className="flex justify-end"><div className="bg-purple-600 text-white px-4 py-2 rounded-2xl rounded-tr-none text-sm">Can you explain this calculus problem?</div></div>
+                                        <div className="flex justify-start"><div className="glass text-gray-200 px-4 py-2 rounded-2xl rounded-tl-none text-sm">I see you've uploaded an image of an integral. Let's break it down using the substitution method...</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Interactive Features */}
-                <section className="mb-20">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center gradient-text mb-12">
-                        Interactive Learning Tools
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <FeatureCard
-                            icon="🖼️"
-                            title="Visual Learning"
-                            description="Upload images of diagrams, equations, or textbook pages. Our multimodal AI can analyze and explain visual content instantly."
-                        />
-                        <FeatureCard
-                            icon="🗣️"
-                            title="Interactive Conversations"
-                            description="Engage in natural dialogue with your AI tutor. Ask follow-up questions, request examples, and explore topics in depth."
-                        />
-                        <FeatureCard
-                            icon="🎮"
-                            title="Gamified Quizzes"
-                            description="Challenge yourself with interactive quizzes to test your knowledge and track your progress with fun achievements."
-                        />
-                        <FeatureCard
-                            icon="📊"
-                            title="Progress Tracking"
-                            description="Monitor your learning journey with detailed progress reports, topic mastery levels, and study streaks."
-                        />
-                        <FeatureCard
-                            icon="🏆"
-                            title="Achievements & Badges"
-                            description="Earn badges as you learn! Unlock achievements for completing challenges, maintaining study streaks, and mastering topics."
-                        />
-                        <FeatureCard
-                            icon="⚡"
-                            title="24/7 Availability"
-                            description="Study on your schedule. Your AI assistant is always ready to help, whether it's midnight or midday."
-                        />
-                    </div>
-                </section>
+                        {/* Smart Note Taker */}
+                        <div className="flex flex-col md:flex-row-reverse gap-12 items-center">
+                            <div className="flex-1 space-y-6">
+                                <div className="text-5xl mb-4">📝</div>
+                                <h2 className="text-3xl md:text-4xl font-bold gradient-text">
+                                    Smart Note Taker
+                                </h2>
+                                <p className="text-xl text-gray-300">
+                                    Transform raw information into structured knowledge instantly.
+                                </p>
+                                <ul className="space-y-4 text-gray-400">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Instant Summarization:</strong> Paste text or upload PDF/Image files to get concise, structured summaries automatically generated by Gemini AI.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Key Point Extraction:</strong> Automatically identifies definitions, dates, and formulas so you never miss important details.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Markdown Support:</strong> Create beautiful, organized notes with full rich-text formatting capabilities.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex-1 w-full">
+                                <div className="glass-card h-64 flex items-center justify-center border border-white/10">
+                                    <div className="text-center space-y-4 opacity-50">
+                                        <div className="text-6xl">📄</div>
+                                        <p>Processing Resume.pdf...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Subject-Specific Features */}
-                <section className="mb-20">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center gradient-text mb-12">
-                        Subject-Specific Support
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <FeatureCard
-                            icon="🧮"
-                            title="Math & Calculus"
-                            description="Step-by-step problem solving, equation explanations, and formula breakdowns."
-                        />
-                        <FeatureCard
-                            icon="🔬"
-                            title="Science (Physics, Chemistry, Biology)"
-                            description="Concept explanations, reaction mechanisms, and experimental analysis."
-                        />
-                        <FeatureCard
-                            icon="📖"
-                            title="Language & Writing"
-                            description="Grammar help, essay structure, vocabulary building, and creative writing support."
-                        />
-                        <FeatureCard
-                            icon="🌍"
-                            title="History & Social Studies"
-                            description="Event analysis, historical context, and critical thinking development."
-                        />
-                    </div>
-                </section>
+                        {/* Game Dungeon */}
+                        <div className="flex flex-col md:flex-row gap-12 items-center">
+                            <div className="flex-1 space-y-6">
+                                <div className="text-5xl mb-4">⚔️</div>
+                                <h2 className="text-3xl md:text-4xl font-bold gradient-text">
+                                    Game Dungeon
+                                </h2>
+                                <p className="text-xl text-gray-300">
+                                    Turn studying into an adventure. Master topics to defeat enemies and clear floors.
+                                </p>
+                                <ul className="space-y-4 text-gray-400">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>RPG Mechanics:</strong> You have Health Points (HP). Answer correctly to attack; get it wrong and take damage!</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Boss Battles:</strong> Face challenging "Boss" questions at the end of every level to test your mastery.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Streak System:</strong> Build combos with consecutive correct answers to unlock special achievements.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex-1 w-full">
+                                <div className="glass-card aspect-video relative overflow-hidden rounded-xl border border-red-500/30">
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10"></div>
+                                    <div className="absolute bottom-4 left-4 z-20 text-white font-mono">
+                                        <div>HERO HP: ████████ 100%</div>
+                                        <div className="text-red-400">ENEMY: MATH GOBLIN</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Learning Modes */}
-                <section className="mb-20">
-                    <h2 className="text-3xl md:text-4xl font-bold text-center gradient-text mb-12">
-                        Flexible Learning Modes
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="glass-card">
-                            <div className="text-5xl mb-4">🎓</div>
-                            <h3 className="text-2xl font-bold text-white mb-3">Explain Mode</h3>
-                            <p className="text-gray-300">
-                                Get detailed explanations of concepts with examples, analogies, and real-world applications.
-                                Perfect for learning something new or reviewing material.
-                            </p>
+                        {/* Smart AI Planner */}
+                        <div className="flex flex-col md:flex-row-reverse gap-12 items-center">
+                            <div className="flex-1 space-y-6">
+                                <div className="text-5xl mb-4">📅</div>
+                                <h2 className="text-3xl md:text-4xl font-bold gradient-text">
+                                    Smart AI Planner
+                                </h2>
+                                <p className="text-xl text-gray-300">
+                                    Take control of your time with an intelligent, interactive schedule manager.
+                                </p>
+                                <ul className="space-y-4 text-gray-400">
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Drag & Drop Schedule:</strong> Easily organize your week by dragging task blocks to your preferred time slots.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Smart Conflict Detection:</strong> The planner automatically alerts you if you double-book or schedule over unavailable times.</span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="text-green-400 mt-1">✓</span>
+                                        <span><strong>Visual Time Blocking:</strong> Get a clear, color-coded view of your weekly study plan to maximize productivity.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="flex-1 w-full">
+                                <div className="glass-card p-4 rounded-xl space-y-2 border border-blue-500/30">
+                                    <div className="h-2 w-full bg-white/10 rounded"></div>
+                                    <div className="flex gap-2">
+                                        <div className="w-16 h-16 bg-blue-600/50 rounded-lg flex items-center justify-center text-xs">Phy</div>
+                                        <div className="w-16 h-16 bg-purple-600/50 rounded-lg flex items-center justify-center text-xs ml-8">Chem</div>
+                                    </div>
+                                    <div className="h-2 w-full bg-white/10 rounded"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="glass-card">
-                            <div className="text-5xl mb-4">💪</div>
-                            <h3 className="text-2xl font-bold text-white mb-3">Practice Mode</h3>
-                            <p className="text-gray-300">
-                                Generate similar problems to practice your skills. Get immediate feedback and detailed
-                                solutions to reinforce your understanding.
-                            </p>
-                        </div>
-                        <div className="glass-card">
-                            <div className="text-5xl mb-4">🎯</div>
-                            <h3 className="text-2xl font-bold text-white mb-3">Quiz Mode</h3>
-                            <p className="text-gray-300">
-                                Test your knowledge with AI-generated quizzes. Multiple choice, short answer, and more.
-                                Track your scores and identify areas for improvement.
-                            </p>
-                        </div>
-                        <div className="glass-card">
-                            <div className="text-5xl mb-4">💡</div>
-                            <h3 className="text-2xl font-bold text-white mb-3">Hint Mode</h3>
-                            <p className="text-gray-300">
-                                Get progressive hints that guide you towards the answer without giving it away.
-                                Learn to think through problems independently.
-                            </p>
-                        </div>
+
                     </div>
                 </section>
 
