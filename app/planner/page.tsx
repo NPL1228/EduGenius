@@ -96,6 +96,7 @@ export default function PlannerPage() {
   const [isAutoScheduleOpen, setIsAutoScheduleOpen] = useState(false);
   const [autoScheduleConfig, setAutoScheduleConfig] = useState({
     maxStudyHoursPerDay: 6,
+    preferredRestTime: 30,
   });
 
   // State for the "Add Block" form
@@ -274,125 +275,97 @@ export default function PlannerPage() {
     }
   }, []); // Run once on mount
 
-  const handleAutoSchedule = () => {
+  const handleAutoSchedule = async () => {
     setIsLoading(true);
 
-    // 1. We now use unavailableTimes state directly
-    // 2. Schedule Tasks
-    const pinnedTasks = tasks.filter(t => t.isPinned && !t.completed);
-    const tasksToSchedule = tasks.filter(t => !t.completed && !t.isPinned);
-    const completedTasks = tasks.filter(t => t.completed);
-
-    // Advanced Priority Scoring: Hard + Important + Deadlines -> Higher score
-    const sortedTasks = [...tasksToSchedule].sort((a, b) => {
-      const getScore = (t: Task) => {
-        const imp = t.importance || 50;
-        const diff = t.difficulty || 50;
-        let urgency = 0;
-        if (t.deadline) {
-          const daysLeft = diffDaysISO(t.deadline, today);
-          urgency = daysLeft <= 0 ? 1000 : 500 / daysLeft;
-        }
-        return (imp * 3) + (diff * 2) + urgency;
+    try {
+      const payload = {
+        tasks,
+        unavailableTimes,
+        subjectPreferences: {}, // Future: Learn from user behavior
+        maxStudyHoursPerDay: autoScheduleConfig.maxStudyHoursPerDay,
+        preferredRestTime: autoScheduleConfig.preferredRestTime,
+        currentDate: new Date().toISOString(),
       };
-      return getScore(b) - getScore(a);
-    });
 
-    const scheduledTasks: Task[] = [...pinnedTasks];
-    const dailyMinutes: Record<string, number> = {};
+      const response = await fetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    // Initialize dailyMinutes with pinned tasks
-    for (const t of pinnedTasks) {
-      if (t.startTime) {
-        const dateKey = t.startTime.split('T')[0];
-        dailyMinutes[dateKey] = (dailyMinutes[dateKey] || 0) + t.minutes;
-      }
-    }
+      if (!response.ok) throw new Error('Failed to generate schedule');
 
-    const checkCollision = (start: Date, durationMinutes: number, currentScheduled: Task[]) => {
-      const startH = start.getHours() + start.getMinutes() / 60;
-      const endH = startH + (durationMinutes / 60);
-      const dayIndex = (start.getDay() + 6) % 7;
+      const data = await response.json();
 
-      // Check daily limit
-      const dateKey = start.toISOString().split('T')[0];
-      if ((dailyMinutes[dateKey] || 0) + durationMinutes > autoScheduleConfig.maxStudyHoursPerDay * 60) return true;
+      // Merge scheduled tasks with existing tasks (updating start times)
+      // and keep completed tasks as is.
+      const newTasks = tasks.map(t => {
+        if (t.completed) return t;
 
-      // Check unavailable blocks
-      for (const ut of unavailableTimes) {
-        if (ut.days.includes(dayIndex)) {
-          const uRanges = ut.startHour > ut.endHour
-            ? [[ut.startHour, 24], [0, ut.endHour]]
-            : [[ut.startHour, ut.endHour]];
-
-          for (const [uS, uE] of uRanges) {
-            if (startH < uE && endH > uS) return true;
-          }
+        // Find if this task was scheduled
+        const scheduled = data.scheduledTasks.find((st: any) => st.id === t.id);
+        if (scheduled) {
+          return { ...t, startTime: scheduled.startTime };
         }
-      }
 
-      // Check other tasks with 30-min buffer
-      for (const t of currentScheduled) {
-        if (!t.startTime) continue;
-        const tStart = new Date(t.startTime);
-        if (!areSameDate(tStart, start)) continue;
-
-        const tStartH = tStart.getHours() + tStart.getMinutes() / 60;
-        const tEndH = tStartH + (t.minutes / 60);
-
-        // Add 30-min (0.5h) buffer AFTER the existing task
-        // We only care if the NEW task starts within the [Start, End + 0.5] of existing task
-        // OR if existing task starts within [NewStart, NewEnd + 0.5] of new task (mutual exclusion)
-
-        // Simpler: treat existing task as occupying [Start, End + 0.5]
-        const cushionedEndH = tEndH + 0.5;
-
-        // Check if new task overlaps with [tStartH, cushionedEndH]
-        if (startH < cushionedEndH && endH > tStartH) return true;
-      }
-      return false;
-    };
-
-    for (const t of sortedTasks) {
-      let assigned = false;
-      // Search up to 4 weeks (28 days) ahead
-      for (let d = 0; d < 28; d++) {
-        const dayDate = new Date(startOfWeek(today));
-        dayDate.setDate(dayDate.getDate() + d);
-
-        for (let h = (d === 0 ? today.getHours() + today.getMinutes() / 60 + 0.5 : 0); h < 24; h += 0.5) {
-          const slot = new Date(dayDate);
-          slot.setHours(Math.floor(h), (h % 1) * 60, 0, 0);
-
-          if (slot < new Date()) continue;
-
-          if (!checkCollision(slot, t.minutes, scheduledTasks)) {
-            scheduledTasks.push({ ...t, startTime: slot.toISOString() });
-            const dateKey = slot.toISOString().split('T')[0];
-            dailyMinutes[dateKey] = (dailyMinutes[dateKey] || 0) + t.minutes;
-            assigned = true;
-            break;
-          }
+        // If not scheduled, but was previously scheduled, we might want to clear it?
+        // Let's assume the AI provides a complete schedule for pending tasks.
+        // If it's in unscheduledTasks, we can clear startTime.
+        const unscheduled = data.unscheduledTasks?.find((ut: any) => ut.id === t.id);
+        if (unscheduled) {
+          return { ...t, startTime: undefined };
         }
-        if (assigned) break;
-      }
-      if (!assigned) scheduledTasks.push(t);
-    }
 
-    setTasks([...completedTasks, ...scheduledTasks]);
-    setIsAutoScheduleOpen(false);
-    setIsLoading(false);
+        return t;
+      });
+
+      setTasks(newTasks);
+
+      if (data.unscheduledTasks?.length > 0) {
+        alert(`Could not schedule ${data.unscheduledTasks.length} tasks due to constraints.`);
+      }
+
+      setIsAutoScheduleOpen(false);
+    } catch (error) {
+      console.error("Auto-schedule error:", error);
+      alert("Failed to generate schedule. Please check your API usage or try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  function generateSuggestion() {
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
+  async function generateSuggestion() {
+    setIsSuggesting(true);
     const withDeadline = tasks.filter((t) => t.deadline).sort((a, b) => (a.deadline! > b.deadline! ? 1 : -1));
-    if (withDeadline.length === 0) {
-      setAiSuggestion("No upcoming deadlines detected. Balance tasks by estimated time.");
-      return;
+    const tasksToSend = tasks.filter(t => !t.completed).map(t => ({
+      subject: t.subject,
+      title: t.title,
+      deadline: t.deadline
+    }));
+
+    try {
+      const response = await fetch('/api/suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: tasksToSend, // Send simplified task objects
+          currentSuggestion: aiSuggestion
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch suggestion');
+
+      const data = await response.json();
+      setAiSuggestion(data.suggestion);
+    } catch (error) {
+      console.error(error);
+      setAiSuggestion("Failed to generate AI suggestion. Try again later.");
+    } finally {
+      setIsSuggesting(false);
     }
-    const soon = withDeadline[0];
-    const daysLeft = diffDaysISO(soon.deadline!, today);
-    setAiSuggestion(`You have ${soon.subject} – ${soon.title} due in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}. Consider prioritising it tonight.`);
   }
 
   const timeBySubject = tasks.reduce<Record<string, number>>((acc, t) => {
@@ -598,6 +571,7 @@ export default function PlannerPage() {
               tasks={tasks.filter(t => !t.completed)}
               currentDate={weekOffset === 0 && selectedDate ? selectedDate : weekStart}
               unavailableTimes={unavailableTimes}
+              preferredRestTime={autoScheduleConfig.preferredRestTime}
               onSlotClick={(date) => {
                 setSelectedTask({
                   id: "",
@@ -623,10 +597,16 @@ export default function PlannerPage() {
           <section className="bg-gray-50 dark:bg-white/5 rounded-2xl p-6 text-center">
             <h2 className="text-lg font-semibold mb-2">AI Study Suggestions</h2>
             <div className="max-w-3xl mx-auto p-4 rounded-md bg-white dark:bg-[#061022] border border-gray-100 dark:border-white/5 text-left">
-              <p className="text-sm text-gray-700 dark:text-gray-200">{aiSuggestion}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{aiSuggestion}</p>
             </div>
             <div className="mt-4">
-              <button onClick={generateSuggestion} className="px-4 py-2 bg-primary text-white rounded-lg">Generate / Update Plan</button>
+              <button
+                onClick={generateSuggestion}
+                disabled={isSuggesting}
+                className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50 transition-opacity"
+              >
+                {isSuggesting ? 'Thinking...' : 'Generate / Update Plan'}
+              </button>
             </div>
           </section>
 
@@ -775,19 +755,35 @@ export default function PlannerPage() {
                 )}
               </div>
 
-              <div className="border-t border-gray-100 dark:border-white/5 pt-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Max Study Hours / Day</label>
-                <div className="flex items-center gap-4 mt-2">
-                  <input
-                    type="range" min="1" max="16" step="0.5"
-                    value={autoScheduleConfig.maxStudyHoursPerDay}
-                    onChange={(e) => setAutoScheduleConfig(s => ({ ...s, maxStudyHoursPerDay: Number(e.target.value) }))}
-                    className="flex-1"
-                    aria-label="Max Study Hours Per Day"
-                  />
-                  <div className="text-sm font-bold text-primary">{autoScheduleConfig.maxStudyHoursPerDay}h</div>
+              <div className="border-t border-gray-100 dark:border-white/5 pt-4 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Max Study Hours / Day</label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <input
+                      type="range" min="1" max="16" step="0.5"
+                      value={autoScheduleConfig.maxStudyHoursPerDay}
+                      onChange={(e) => setAutoScheduleConfig(s => ({ ...s, maxStudyHoursPerDay: Number(e.target.value) }))}
+                      className="flex-1"
+                      aria-label="Max Study Hours Per Day"
+                    />
+                    <div className="text-sm font-bold text-primary">{autoScheduleConfig.maxStudyHoursPerDay}h</div>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">The AI will distribute your tasks without exceeding this limit.</p>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1">The AI will distribute your tasks without exceeding this limit.</p>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Rest Time (minutes)</label>
+                  <div className="flex items-center gap-4 mt-2">
+                    <input
+                      type="number" min="0" max="120" step="5"
+                      value={autoScheduleConfig.preferredRestTime}
+                      onChange={(e) => setAutoScheduleConfig(s => ({ ...s, preferredRestTime: Number(e.target.value) }))}
+                      className="w-full mt-1 p-2 rounded-md border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0b1a2b] text-sm"
+                      aria-label="Preferred Rest Time"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">The AI will insert this mandatory buffer between study blocks.</p>
+                </div>
               </div>
             </div>
 

@@ -5,168 +5,148 @@ const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
 // Types
 interface Task {
-    id: string;
-    subject: string;
-    title: string;
-    minutes: number;
-    deadline?: string;
-    completed?: boolean;
-    startTime?: string;
-    importance?: number;
-    difficulty?: number;
-    isPinned?: boolean;
-    color?: string;
-    notes?: string;
+  id: string;
+  subject: string;
+  title: string;
+  minutes: number;
+  deadline?: string;
+  completed?: boolean;
+  startTime?: string;
+  importance?: number;
+  difficulty?: number;
+  isPinned?: boolean;
+  color?: string;
+  notes?: string;
 }
 
 interface UnavailableTime {
-    id: string;
-    label: string;
-    startHour: number;
-    endHour: number;
-    days: number[];
+  id: string;
+  label: string;
+  startHour: number;
+  endHour: number;
+  days: number[];
 }
 
 interface SubjectPreferences {
-    [subject: string]: {
-        preferredHours: number[];
-    };
+  [subject: string]: {
+    preferredHours: number[];
+  };
 }
 
 interface ScheduleRequest {
-    tasks: Task[];
-    unavailableTimes: UnavailableTime[];
-    subjectPreferences: SubjectPreferences;
-    maxStudyHoursPerDay: number;
-    currentDate: string;
+  tasks: Task[];
+  unavailableTimes: UnavailableTime[];
+  subjectPreferences: SubjectPreferences;
+  maxStudyHoursPerDay: number;
+  preferredRestTime: number;
+  currentDate: string;
 }
 
 export async function POST(req: Request) {
-    if (!apiKey) {
-        return NextResponse.json(
-            { error: "Gemini API Key is not configured" },
-            { status: 500 }
-        );
-    }
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "Gemini API Key is not configured" },
+      { status: 500 }
+    );
+  }
 
-    try {
-        const data: ScheduleRequest = await req.json();
-        const { tasks, unavailableTimes, subjectPreferences, maxStudyHoursPerDay, currentDate } = data;
+  try {
+    const data: ScheduleRequest = await req.json();
+    const { tasks, unavailableTimes, subjectPreferences, maxStudyHoursPerDay, preferredRestTime, currentDate } = data;
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-        // Build comprehensive prompt with all rules
-        const prompt = `You are an AI study scheduler. Your task is to create an optimal weekly study schedule following strict rules.
+    // Build comprehensive prompt with all rules
+    const prompt = `You are an AI study scheduler. Your task is to create an optimal weekly study schedule following these strict rules:
 
-**CURRENT DATE & TIME**: ${currentDate}
+**RULE 1: LOAD ALL CONSTRAINTS AND PENDING TASKS**
+- Use the provided PENDING TASKS and UNAVAILABLE TIMES.
+- CURRENT DATE & TIME: ${currentDate}
+- User's Preferred Rest Time: ${preferredRestTime} minutes (MANDATORY).
 
-**SCHEDULING SCOPE RULES**:
-- Only schedule pending (uncompleted) tasks
-- Never modify past or completed blocks
-- Only schedule into future time slots
-- Completed tasks are excluded from scheduling
+**RULE 2: FILTER OUT UNAVAILABLE TIME**
+- Study blocks MUST NEVER overlap with any UNAVAILABLE TIMES (Sleep, Classes, Work, etc.).
+- Rest time should not be added inside Sleep, Meals, or Unavailable blocks.
 
-**TASKS TO SCHEDULE**:
-${JSON.stringify(tasks.filter(t => !t.completed && !t.isPinned), null, 2)}
+**RULE 3: SCORE TASKS BY MULTIPLE FACTORS**
+Score each task based on:
+1. **Deadline Urgency**: Tasks with closer deadlines get higher priority.
+2. **Importance**: User-defined importance level (0-100).
+3. **Difficulty**: User-defined difficulty level (0-100).
+4. **Past Performance & Preferences**: Use the SUBJECT PREFERENCES to place tasks in slots where the user is most productive.
 
-**PINNED TASKS (DO NOT RESCHEDULE)**:
-${JSON.stringify(tasks.filter(t => t.isPinned && !t.completed), null, 2)}
+**RULE 4: ALLOCATE STUDY TIME PER TASK**
+- Respect the "minutes" required for each task. Split large tasks into multiple slots if needed.
 
-**UNAVAILABLE TIMES (STRICT CONSTRAINTS)**:
+**RULE 5: GENERATE NON-OVERLAPPING TIME BLOCKS WITH MANDATORY REST**
+- No two study sessions can overlap. 
+- You MUST insert a ${preferredRestTime}-minute rest break AFTER every study session on the same day.
+- This rest break applies even if the consecutive blocks are for different subjects.
+- Rest time MUST NOT overlap with study blocks or unavailable time.
+- Rest time DOES NOT count toward "max study hours per day".
+- **EXCEPTION**: The first study block of the day does not require rest before it. The last study block of the day does not require rest after it.
+
+**RULE 6: PREFER EARLIER PLACEMENT FOR HIGHER-PRIORITY TASKS**
+- Tasks with the highest scores MUST be placed as early as possible in the schedule.
+
+**RULE 7: BALANCE WORKLOAD ACROSS DAYS**
+- Do not exceed the "Maximum study hours per day": ${maxStudyHoursPerDay} hrs.
+- Distribute tasks evenly to prevent burnout.
+- If available time is limited, prioritize rest time over study duration (shorten or split the study block, but never remove rest time).
+
+**RULE 8: DO NOT MODIFY COMPLETED OR PAST BLOCKS**
+- Only schedule from the current time onwards. 
+- Completed tasks and past sessions are strictly read-only.
+
+**RULE 9: RESPECT USER MANUAL EDITS (PINNED TASKS)**
+- Tasks with "isPinned": true have a fixed startTime set by the user.
+- **EXCEPTION**: If a pinned task conflicts with RULE 2, RULE 5, or RULE 10, YOU MUST RESCHEDULE IT to the nearest available slot.
+
+**RULE 10: DETECT AND AVOID ALL CONFLICTS**
+- Every task in the schedule MUST have a valid, non-overlapping startTime that respects the mandatory rest time.
+- If a task cannot fit anywhere, list it in "unscheduledTasks".
+
+**DATA**:
+PENDING TASKS:
+${JSON.stringify(tasks.filter(t => !t.completed), null, 2)}
+
+UNAVAILABLE TIMES:
 ${JSON.stringify(unavailableTimes, null, 2)}
 
-**SUBJECT PREFERENCES (LEARNED FROM USER)**:
-${JSON.stringify(subjectPreferences, null, 2)}
-
-**CONSTRAINTS**:
-- Maximum study hours per day: ${maxStudyHoursPerDay}
-- Study blocks MUST NEVER overlap each other
-- Study blocks MUST NEVER overlap unavailable times
-- **CRITICAL**: Insert a 30-minute rest break AFTER every study block. (e.g., if task ends at 10:00, next task cannot start before 10:30)
-- All times are in 24-hour format (0-23)
-- Days: 0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday
-
-**PRIORITY RULES**:
-Calculate priority score for each task:
-- Deadline urgency: If deadline exists, use exponential weight: 1000 * Math.pow(0.8, daysUntilDeadline)
-- Importance weight: 0.4
-- Difficulty weight: 0.3
-- Urgency weight: 5.0
-- Formula: (importance * 0.4) + (difficulty * 0.3) + (urgency * 5.0)
-
-Schedule high-priority tasks:
-- Earlier in the week
-- During preferred hours (if learned)
-- With adequate time allocation
-
-**PLACEMENT STRATEGY**:
-1. Sort tasks by priority (highest first)
-2. For each task, search up to 6 weeks (42 days) ahead
-3. Prefer user's preferred hours for each subject
-4. Avoid overloading any single day
-5. Split large tasks across multiple days if needed
-6. Ensure no conflicts with unavailable times or other tasks
-
-**TIME ALLOCATION**:
-- Distribute study time evenly across the week
-- Prefer multiple medium blocks over one long block
-- Match block duration to task requirements
+SUBJECT PREFERENCES:
+${JSON.stringify(subjectPreferences || {}, null, 2)}
 
 **OUTPUT FORMAT**:
-Return a JSON object with this exact structure:
+Return a JSON object:
 {
-  "scheduledTasks": [
-    {
-      "id": "task_id",
-      "startTime": "ISO 8601 datetime string",
-      "reasoning": "Brief explanation of placement"
-    }
-  ],
-  "unscheduledTasks": [
-    {
-      "id": "task_id",
-      "reason": "Why it couldn't be scheduled",
-      "suggestions": ["Alternative 1", "Alternative 2"]
-    }
-  ],
-  "insights": {
-    "totalScheduled": number,
-    "totalUnscheduled": number,
-    "weeklyStudyHours": number,
-    "recommendations": ["Recommendation 1", "Recommendation 2"]
-  }
+  "scheduledTasks": [{ "id": "task_id", "startTime": "ISO String", "reasoning": "Why this time?" }],
+  "unscheduledTasks": [{ "id": "task_id", "reason": "Why?" }],
+  "insights": { "totalScheduled": number, "totalUnscheduled": number, "weeklyStudyHours": number }
 }
 
-**CRITICAL RULES**:
-- Every scheduled task MUST have a valid startTime that doesn't conflict
-- If a task cannot be scheduled, include it in unscheduledTasks with suggestions
-- Respect all unavailable time blocks strictly
-- Consider subject preferences when available
-- Ensure future-only scheduling (no past dates)
+Provide the optimal schedule now.`;
 
-Now, create the optimal schedule following ALL these rules.`;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let aiResponse = response.text();
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let aiResponse = response.text();
+    // Clean up markdown code blocks if present
+    aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-        // Clean up markdown code blocks if present
-        aiResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    // Parse the AI response
+    const schedule = JSON.parse(aiResponse);
 
-        // Parse the AI response
-        const schedule = JSON.parse(aiResponse);
+    return NextResponse.json(schedule);
 
-        return NextResponse.json(schedule);
-
-    } catch (error) {
-        console.error("AI Scheduler Error:", error);
-        return NextResponse.json(
-            {
-                error: error instanceof Error ? error.message : "Failed to generate schedule",
-                details: error instanceof Error ? error.stack : undefined
-            },
-            { status: 500 }
-        );
-    }
+  } catch (error) {
+    console.error("AI Scheduler Error:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to generate schedule",
+        details: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  }
 }

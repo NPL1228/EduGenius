@@ -5,6 +5,7 @@ type WeeklyScheduleProps = {
     tasks: Task[];
     currentDate: Date;
     unavailableTimes?: UnavailableTime[];
+    preferredRestTime?: number;
     onSlotClick?: (date: Date) => void;
     onTaskClick?: (task: Task) => void;
     onTaskChange?: (task: Task) => void;
@@ -14,7 +15,15 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PIXELS_PER_HOUR = 64;
 
-export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = [], onSlotClick, onTaskClick, onTaskChange }: WeeklyScheduleProps) {
+export default function WeeklySchedule({
+    tasks,
+    currentDate,
+    unavailableTimes = [],
+    preferredRestTime = 30,
+    onSlotClick,
+    onTaskClick,
+    onTaskChange
+}: WeeklyScheduleProps) {
     const weekDates = useMemo(() => {
         const start = startOfWeek(currentDate);
         return Array.from({ length: 7 }).map((_, i) => {
@@ -121,34 +130,49 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
         setTempTask(null);
     };
 
-    // Check conflict
-    const checkConflict = (t: Task, dayIndex: number) => {
-        if (!t.startTime) return false;
+    // Check conflict and rest violation
+    const checkStatus = (t: Task, dayIndex: number) => {
+        if (!t.startTime) return { hasConflict: false, hasRestViolation: false };
         const start = new Date(t.startTime);
         const startH = start.getHours() + start.getMinutes() / 60;
         const endH = startH + (t.minutes / 60);
 
         // Check against unavailable times
-        const unavailableConflict = unavailableTimes.some(ut => {
+        const hasConflict = unavailableTimes.some(ut => {
             if (!ut.days.includes(dayIndex)) return false;
-            // Handle wrap around: 23-7 -> 23-24 & 0-7
             const ranges = ut.startHour > ut.endHour
                 ? [[ut.startHour, 24], [0, ut.endHour]]
                 : [[ut.startHour, ut.endHour]];
-
             return ranges.some(([uStart, uEnd]) => startH < uEnd && endH > uStart);
-        });
-
-        // Check against other tasks
-        const taskConflict = tasks.some(other => {
-            if (other.id === t.id || !other.startTime || isSameDay(new Date(other.startTime), new Date(t.startTime!)) === false) return false;
+        }) || tasks.some(other => {
+            if (other.id === t.id || !other.startTime || !isSameDay(new Date(other.startTime), new Date(t.startTime!))) return false;
             const oStart = new Date(other.startTime);
             const oStartH = oStart.getHours() + oStart.getMinutes() / 60;
             const oEndH = oStartH + (other.minutes / 60);
             return startH < oEndH && endH > oStartH;
         });
 
-        return unavailableConflict || taskConflict;
+        // Check rest violation: detect if any other study block is within preferredRestTime
+        const restBuffer = preferredRestTime / 60;
+        const hasRestViolation = tasks.some(other => {
+            if (other.id === t.id || !other.startTime || !isSameDay(new Date(other.startTime), new Date(t.startTime!))) return false;
+            const oStart = new Date(other.startTime);
+            const oStartH = oStart.getHours() + oStart.getMinutes() / 60;
+            const oEndH = oStartH + (other.minutes / 60);
+
+            // Violation if: 
+            // 1. This task starts before (other.end + buffer) AND after other.start
+            // 2. This task ends after (other.start - buffer) AND before other.end
+            // Essentially, if the gap between sessions is < restBuffer
+            const gapAfterOther = startH - oEndH;
+            const gapBeforeOther = oStartH - endH;
+
+            // Only check when gap is positive but too small
+            return (gapAfterOther >= 0 && gapAfterOther < restBuffer) ||
+                (gapBeforeOther >= 0 && gapBeforeOther < restBuffer);
+        });
+
+        return { hasConflict, hasRestViolation };
     };
 
     return (
@@ -234,7 +258,7 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                     const startH = start.getHours() + start.getMinutes() / 60;
                                     const top = startH * 64;
                                     const height = (displayTask.minutes / 60) * 64;
-                                    const hasConflict = checkConflict(displayTask, dayIndex);
+                                    const { hasConflict, hasRestViolation } = checkStatus(displayTask, dayIndex);
 
                                     return (
                                         <div
@@ -242,15 +266,15 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                             className={`
                                                 absolute left-1 right-1 rounded-lg p-2 text-xs overflow-hidden cursor-grab active:cursor-grabbing
                                                 hover:scale-[1.02] transition-transform shadow-sm ring-1 hover:z-30
-                                                ${hasConflict ? 'ring-red-500 bg-red-500/20 animate-pulse' : 'ring-white/20'}
+                                                ${hasConflict ? 'ring-red-500 bg-red-500/20 animate-pulse' : hasRestViolation ? 'ring-amber-500 bg-amber-500/10' : 'ring-white/20'}
                                                 ${isDragging ? 'z-50 shadow-xl scale-105 opacity-90' : 'z-10'}
                                             `}
                                             style={{
                                                 top: `${top}px`,
                                                 height: `${Math.max(24, height)}px`,
-                                                backgroundColor: hasConflict ? undefined : (displayTask.color || '#4f46e5'),
+                                                backgroundColor: hasConflict ? undefined : hasRestViolation ? (displayTask.color || '#4f46e5') : (displayTask.color || '#4f46e5'),
                                                 color: 'white',
-                                                border: `1px solid ${hasConflict ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.2)'}`,
+                                                border: `1px solid ${hasConflict ? 'rgba(239, 68, 68, 0.5)' : hasRestViolation ? 'rgba(245, 158, 11, 0.5)' : 'rgba(255, 255, 255, 0.2)'}`,
                                                 boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : 'none',
                                             }}
                                             onPointerDown={(e) => handlePointerDown(e, t, 'move')}
@@ -267,6 +291,14 @@ export default function WeeklySchedule({ tasks, currentDate, unavailableTimes = 
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                     </svg>
                                                     <span className="text-[8px] font-black uppercase">Conflict</span>
+                                                </div>
+                                            )}
+                                            {!hasConflict && hasRestViolation && (
+                                                <div className="absolute top-0 right-0 p-1 bg-amber-500 text-white rounded-bl-lg z-20 shadow-sm flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <span className="text-[8px] font-black uppercase">Short Rest</span>
                                                 </div>
                                             )}
                                             <div className="font-bold truncate pointer-events-none pr-6">{displayTask.subject}</div>
