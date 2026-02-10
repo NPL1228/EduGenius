@@ -29,7 +29,7 @@ export const TopicSelection: React.FC = () => {
             >
                 <div className="text-center">
                     <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 mb-2">
-                        GEM HACK
+                        EDUGEONS
                     </h1>
                     <p className="text-slate-400 font-medium">Flashcard Dungeon Crawler</p>
                 </div>

@@ -4,6 +4,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/game_dungeon/dungeon_store';
 import { MessageSquare, Send, X, Bot, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 export const DungeonChat: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -57,10 +62,45 @@ export const DungeonChat: React.FC = () => {
                                 chatMessages.map((msg, i) => (
                                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user'
-                                                ? 'bg-orange-600 text-white rounded-tr-none'
-                                                : 'bg-slate-700 text-slate-200 rounded-tl-none'
+                                            ? 'bg-orange-600 text-white rounded-tr-none'
+                                            : 'bg-slate-700 text-slate-200 rounded-tl-none'
                                             }`}>
-                                            {msg.content}
+                                            <ReactMarkdown
+                                                className="prose prose-invert prose-sm max-w-none break-words"
+                                                remarkPlugins={[remarkGfm, remarkMath]}
+                                                rehypePlugins={[rehypeKatex]}
+                                                components={{
+                                                    p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                                    ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
+                                                    ol: ({ children }) => <ol className="list-decimal ml-4 mb-2 space-y-1">{children}</ol>,
+                                                    li: ({ children }) => <li>{children}</li>,
+                                                    code: ({ className, children, ...props }: any) => {
+                                                        const match = /language-(\w+)/.exec(className || '');
+                                                        const isInline = !match && !children?.toString().includes('\n');
+                                                        return isInline ? (
+                                                            <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono" {...props}>
+                                                                {children}
+                                                            </code>
+                                                        ) : (
+                                                            <div className="bg-black/30 rounded-lg p-2 my-2 overflow-x-auto">
+                                                                <code className={`${className} text-xs font-mono`} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            </div>
+                                                        );
+                                                    },
+                                                    h1: ({ children }) => <h1 className="text-lg font-bold mb-2 mt-1">{children}</h1>,
+                                                    h2: ({ children }) => <h2 className="text-base font-bold mb-2 mt-1">{children}</h2>,
+                                                    h3: ({ children }) => <h3 className="text-sm font-bold mb-1 mt-1">{children}</h3>,
+                                                    blockquote: ({ children }) => <blockquote className="border-l-2 border-white/30 pl-3 italic my-2 text-white/80">{children}</blockquote>,
+                                                    a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:underline">{children}</a>,
+                                                    table: ({ children }) => <div className="overflow-x-auto my-2"><table className="min-w-full border-collapse border border-white/20 text-xs">{children}</table></div>,
+                                                    th: ({ children }) => <th className="border border-white/20 px-2 py-1 bg-white/10">{children}</th>,
+                                                    td: ({ children }) => <td className="border border-white/20 px-2 py-1">{children}</td>,
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
                                 ))
